@@ -17,6 +17,7 @@ export interface MailLogData {
   actionsTaken: ActionResult[] | null;
   status: MailLogStatus;
   errorMessage: string | null;
+  userId?: string | null;  // ユーザーID（オプション、マルチユーザー対応）
 }
 
 /**
@@ -33,9 +34,9 @@ export async function saveMailLog(db: D1Database, data: MailLogData): Promise<vo
   await db
     .prepare(
       `INSERT INTO mail_logs
-        (id, received_at, from_addr, to_addr, subject, understanding, actions_taken, status, error_message)
+        (id, received_at, from_addr, to_addr, subject, understanding, actions_taken, status, error_message, user_id)
        VALUES
-        (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       data.id,
@@ -46,7 +47,8 @@ export async function saveMailLog(db: D1Database, data: MailLogData): Promise<vo
       data.understanding,
       actionsTakenJson,
       data.status,
-      data.errorMessage
+      data.errorMessage,
+      data.userId ?? null
     )
     .run();
 }

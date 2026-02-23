@@ -8,6 +8,8 @@ import { verifyMailgunSignature } from '../utils/verify.js';
 import { applyPrefilter } from '../filters/prefilter.js';
 import { runAgent } from '../agent/executor.js';
 import { saveMailLog } from '../db/d1.js';
+import { findEmailRoute } from '../db/routes.js';
+import { getUserSettings } from '../db/settings.js';
 
 /**
  * UUID v4 を生成する（Web Crypto API を使用）
@@ -63,6 +65,29 @@ export async function handleInbound(request: Request, env: Env): Promise<Respons
 
   console.log(`[inbound] Received email from: ${email.from}, subject: ${email.subject}`);
 
+  // --- [3.5] メールルーティング（マルチユーザー対応） ---
+  let userId: string | null = null;
+  let userSettings: { slackWebhookUrl?: string; notionApiKey?: string; notionDatabaseId?: string } | null = null;
+
+  // 受信メールアドレスからユーザーを検索
+  const emailRoute = await findEmailRoute(env.DB, email.to);
+  if (emailRoute && emailRoute.isActive) {
+    userId = emailRoute.userId;
+    console.log(`[inbound] Routed to user: ${userId}`);
+
+    // ユーザー設定を取得
+    const settings = await getUserSettings(env.DB, userId, env.ENCRYPTION_KEY);
+    if (settings) {
+      userSettings = {
+        slackWebhookUrl: settings.slackWebhookUrl ?? undefined,
+        notionApiKey: settings.notionApiKey ?? undefined,
+        notionDatabaseId: settings.notionDatabaseId ?? undefined,
+      };
+    }
+  } else {
+    console.log('[inbound] No user route found, using fallback environment variables');
+  }
+
   // --- [4] 事前フィルタ ---
   const filterResult = applyPrefilter(email);
   if (!filterResult.pass) {
@@ -79,6 +104,7 @@ export async function handleInbound(request: Request, env: Env): Promise<Respons
         actionsTaken: null,
         status: 'filtered',
         errorMessage: filterResult.reason ?? null,
+        userId,
       });
     } catch (dbErr) {
       console.error('[inbound] Failed to save filtered log to D1:', dbErr);
@@ -89,7 +115,7 @@ export async function handleInbound(request: Request, env: Env): Promise<Respons
 
   // --- [5] Gemini エージェント処理 ---
   try {
-    const agentResult = await runAgent(email, env);
+    const agentResult = await runAgent(email, env, userSettings);
 
     // --- [6] D1 へ処理ログ保存 ---
     try {
@@ -103,6 +129,7 @@ export async function handleInbound(request: Request, env: Env): Promise<Respons
         actionsTaken: agentResult.actionResults,
         status: 'processed',
         errorMessage: null,
+        userId,
       });
     } catch (dbErr) {
       console.error('[inbound] Failed to save processed log to D1:', dbErr);
@@ -121,6 +148,7 @@ export async function handleInbound(request: Request, env: Env): Promise<Respons
         actionsTaken: null,
         status: 'error',
         errorMessage: agentErr instanceof Error ? agentErr.message : String(agentErr),
+        userId,
       });
     } catch (dbErr) {
       console.error('[inbound] Failed to save error log to D1:', dbErr);

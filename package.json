@@ -5,9 +5,14 @@
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "build": "npm run build:frontend && npm run typecheck",
+    "build:frontend": "cd frontend && npm install && npm run build",
+    "deploy": "npm run build && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "db:migrate": "wrangler d1 migrations apply hermes-db"
+  },
+  "dependencies": {
+    "@cloudflare/kv-asset-handler": "^0.3.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240208.0",

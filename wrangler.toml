@@ -2,13 +2,38 @@ name = "hermes"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
+# 静的ファイル配信（フロントエンド）
+[site]
+bucket = "./frontend/dist"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "hermes-db"
 database_id = "d5362889-7590-477d-b8e2-0956b84fbcab"
 
+# セッション管理用 KV ストレージ（オプション）
+# 作成方法: wrangler kv:namespace create "SESSIONS"
+# [[kv_namespaces]]
+# binding = "SESSIONS"
+# id = "YOUR_KV_NAMESPACE_ID"
+
+# Workers Sites用KVネームスペース（自動作成される）
+# wrangler publish 時に __STATIC_CONTENT として自動バインドされます
+
 [vars]
 ENVIRONMENT = "production"
+
+# 注意: 以下の機密情報は wrangler secret put コマンドで設定してください
+# - JWT_SECRET: JWT 署名用シークレット（ランダムな256ビット文字列）
+# - ENCRYPTION_KEY: 認証情報暗号化キー（crypto.ts の generateEncryptionKey() で生成）
+#
+# 設定例:
+#   wrangler secret put JWT_SECRET
+#   wrangler secret put ENCRYPTION_KEY
+#
+# 既存の環境変数（SLACK_WEBHOOK_URL、NOTION_API_KEY、NOTION_DATABASE_ID）は
+# マルチユーザー移行後もフォールバックとして使用可能ですが、
+# ユーザー設定に移行後は削除することを推奨します。
 
 [observability.logs]
 enabled = true

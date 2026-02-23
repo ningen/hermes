@@ -25,9 +25,18 @@ export interface AgentResult {
  *
  * @param email - パース済みメール情報
  * @param env   - 環境変数バインディング
+ * @param userSettings - ユーザー固有の設定（オプション、マルチユーザー対応）
  * @returns エージェントの処理結果
  */
-export async function runAgent(email: ParsedEmail, env: Env): Promise<AgentResult> {
+export async function runAgent(
+  email: ParsedEmail,
+  env: Env,
+  userSettings?: {
+    slackWebhookUrl?: string;
+    notionApiKey?: string;
+    notionDatabaseId?: string;
+  } | null
+): Promise<AgentResult> {
   // 1. Gemini にプロンプトを送信してアクションを決定
   const prompt = buildAgentPrompt(email);
   const geminiResponse: GeminiResponse = await callGemini(prompt, env.GEMINI_API_KEY);
@@ -36,7 +45,7 @@ export async function runAgent(email: ParsedEmail, env: Env): Promise<AgentResul
   console.log('[executor] Gemini actions:', JSON.stringify(geminiResponse.actions));
 
   // 2. 各アクションを並列実行
-  const actionResults = await executeActions(geminiResponse.actions, env);
+  const actionResults = await executeActions(geminiResponse.actions, env, userSettings);
 
   return {
     understanding: geminiResponse.understanding,
@@ -50,13 +59,22 @@ export async function runAgent(email: ParsedEmail, env: Env): Promise<AgentResul
  *
  * @param actions - 実行するアクションのリスト
  * @param env     - 環境変数バインディング
+ * @param userSettings - ユーザー固有の設定
  * @returns 各アクションの実行結果
  */
-async function executeActions(actions: Action[], env: Env): Promise<ActionResult[]> {
+async function executeActions(
+  actions: Action[],
+  env: Env,
+  userSettings?: {
+    slackWebhookUrl?: string;
+    notionApiKey?: string;
+    notionDatabaseId?: string;
+  } | null
+): Promise<ActionResult[]> {
   const results: ActionResult[] = [];
 
   for (const action of actions) {
-    const result = await executeAction(action, env);
+    const result = await executeAction(action, env, userSettings);
     results.push(result);
 
     if (!result.success) {
@@ -72,11 +90,29 @@ async function executeActions(actions: Action[], env: Env): Promise<ActionResult
 /**
  * 単一アクションを実行する。
  */
-async function executeAction(action: Action, env: Env): Promise<ActionResult> {
+async function executeAction(
+  action: Action,
+  env: Env,
+  userSettings?: {
+    slackWebhookUrl?: string;
+    notionApiKey?: string;
+    notionDatabaseId?: string;
+  } | null
+): Promise<ActionResult> {
   try {
     switch (action.type) {
-      case 'notify_slack':
-        return await notifySlack(action, env.SLACK_WEBHOOK_URL);
+      case 'notify_slack': {
+        // ユーザー設定がある場合はそれを使用、なければ環境変数をフォールバック
+        const slackWebhookUrl = userSettings?.slackWebhookUrl ?? env.SLACK_WEBHOOK_URL;
+        if (!slackWebhookUrl) {
+          return {
+            type: 'notify_slack',
+            success: false,
+            error: 'Slack webhook URL not configured',
+          };
+        }
+        return await notifySlack(action, slackWebhookUrl);
+      }
 
       case 'reply_email':
         return await replyEmail(
@@ -86,8 +122,19 @@ async function executeAction(action: Action, env: Env): Promise<ActionResult> {
           env.FROM_ADDRESS
         );
 
-      case 'create_schedule':
-        return await createSchedule(action, env.NOTION_API_KEY, env.NOTION_DATABASE_ID);
+      case 'create_schedule': {
+        // ユーザー設定がある場合はそれを使用、なければ環境変数をフォールバック
+        const notionApiKey = userSettings?.notionApiKey ?? env.NOTION_API_KEY;
+        const notionDatabaseId = userSettings?.notionDatabaseId ?? env.NOTION_DATABASE_ID;
+        if (!notionApiKey || !notionDatabaseId) {
+          return {
+            type: 'create_schedule',
+            success: false,
+            error: 'Notion API key or database ID not configured',
+          };
+        }
+        return await createSchedule(action, notionApiKey, notionDatabaseId);
+      }
 
       case 'ignore':
         console.log('[executor] Action "ignore": skipping as instructed by Gemini');

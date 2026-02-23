@@ -2,5 +2,9 @@ node_modules/
 dist/
 .wrangler/
 
+# フロントエンドビルド成果物
+frontend/dist/
+frontend/node_modules/
+
 # ローカル開発用シークレット（絶対にコミットしない）
 .dev.vars
