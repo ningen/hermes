@@ -79,16 +79,15 @@ async function executeAction(action: Action, env: Env): Promise<ActionResult> {
         return await notifySlack(action, env.SLACK_WEBHOOK_URL);
 
       case 'reply_email':
-        // Phase 2: MAILGUN_DOMAIN と FROM_ADDRESS は将来的に環境変数から取得
         return await replyEmail(
           action,
           env.MAILGUN_API_KEY,
-          'placeholder.mailgundomain.com', // Phase 2 で環境変数化
-          'hermes@placeholder.mailgundomain.com' // Phase 2 で環境変数化
+          env.MAILGUN_DOMAIN,
+          env.FROM_ADDRESS
         );
 
       case 'create_schedule':
-        return await createSchedule(action);
+        return await createSchedule(action, env.NOTION_API_KEY, env.NOTION_DATABASE_ID);
 
       case 'ignore':
         console.log('[executor] Action "ignore": skipping as instructed by Gemini');

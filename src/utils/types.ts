@@ -8,8 +8,12 @@
 export interface Env {
   DB: D1Database;
   MAILGUN_API_KEY: string;
+  MAILGUN_DOMAIN: string;
+  FROM_ADDRESS: string;
   GEMINI_API_KEY: string;
   SLACK_WEBHOOK_URL: string;
+  NOTION_API_KEY: string;
+  NOTION_DATABASE_ID: string;
   ENVIRONMENT: string;
 }
 

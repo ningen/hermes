@@ -1,35 +1,107 @@
 /**
  * スケジュール登録アクション（Phase 2）
  *
- * Google Calendar / Notion 等へのスケジュール登録を行う。
- * 現時点では Phase 2 のスタブ実装。
+ * Notion API を使用してデータベースにスケジュールエントリを作成する。
  */
 import type { CreateScheduleAction, ActionResult } from './types.js';
 
 /**
- * スケジュールを登録する。
+ * Notion データベースにスケジュールエントリを作成する。
  *
- * Phase 2 では Google Calendar API または Notion API と連携する。
- * 現在はスタブとしてログのみ出力する。
+ * Notion Pages API を使用してデータベースにエントリを追加する。
+ * データベースには以下のプロパティが必要:
+ * - Name (Title): スケジュールのタイトル
+ * - Date (Date): 開始/終了時刻
  *
- * @param action - create_schedule アクション
+ * @param action     - create_schedule アクション
+ * @param apiKey     - Notion API キー (integration token)
+ * @param databaseId - ターゲットデータベースの ID
  * @returns アクション実行結果
  */
 export async function createSchedule(
-  action: CreateScheduleAction
+  action: CreateScheduleAction,
+  apiKey: string,
+  databaseId: string
 ): Promise<ActionResult> {
-  // Phase 2: Google Calendar API / Notion API と連携
-  // 現時点ではスタブ実装
-  console.log('[create_schedule] Schedule creation requested (Phase 2 stub):', {
-    title: action.params.title,
-    description: action.params.description,
-    startTime: action.params.startTime,
-    endTime: action.params.endTime,
-  });
+  try {
+    console.log('[create_schedule] Creating Notion database entry:', {
+      title: action.params.title,
+      startTime: action.params.startTime,
+      endTime: action.params.endTime,
+    });
 
-  return {
-    type: 'create_schedule',
-    success: false,
-    error: 'create_schedule is not yet implemented (Phase 2)',
-  };
+    // Notion API ペイロードを構築
+    const payload = {
+      parent: {
+        database_id: databaseId,
+      },
+      properties: {
+        Name: {
+          title: [
+            {
+              text: {
+                content: action.params.title,
+              },
+            },
+          ],
+        },
+        Date: {
+          date: {
+            start: action.params.startTime,
+            end: action.params.endTime || undefined,
+          },
+        },
+      },
+      // 説明がある場合は children として追加
+      children: action.params.description
+        ? [
+            {
+              object: 'block',
+              type: 'paragraph',
+              paragraph: {
+                rich_text: [
+                  {
+                    type: 'text',
+                    text: {
+                      content: action.params.description,
+                    },
+                  },
+                ],
+              },
+            },
+          ]
+        : undefined,
+    };
+
+    // Notion Pages API を呼び出し
+    const response = await fetch('https://api.notion.com/v1/pages', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return {
+        type: 'create_schedule',
+        success: false,
+        error: `Notion API error: ${response.status} ${errorText}`,
+      };
+    }
+
+    const result = (await response.json()) as { id: string };
+    console.log('[create_schedule] Successfully created Notion entry:', result.id);
+
+    return { type: 'create_schedule', success: true };
+  } catch (err) {
+    return {
+      type: 'create_schedule',
+      success: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
 }
