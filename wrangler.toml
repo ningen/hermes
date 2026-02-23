@@ -15,7 +15,7 @@ database_id = "d5362889-7590-477d-b8e2-0956b84fbcab"
 # 作成方法: wrangler kv:namespace create "SESSIONS"
 # [[kv_namespaces]]
 # binding = "SESSIONS"
-# id = "YOUR_KV_NAMESPACE_ID"
+# id = "114c43ae33f94e9fa2f92c8f66a2dcb7"
 
 # Workers Sites用KVネームスペース（自動作成される）
 # wrangler publish 時に __STATIC_CONTENT として自動バインドされます
