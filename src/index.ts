@@ -3,6 +3,8 @@
  *
  * hermes - 受信メール処理エージェント
  */
+// @ts-ignore
+import manifestJSON from "__STATIC_CONTENT_MANIFEST";
 import type { Env } from './utils/types.js';
 import { handleInbound } from './handlers/inbound.js';
 import { routeAPI } from './api/router.js';
@@ -39,6 +41,11 @@ export default {
     }
 
     // 静的ファイル配信（Workers Sites）
+    // __STATIC_CONTENT_MANIFESTが定義されているかチェック
+    // if (typeof __STATIC_CONTENT_MANIFEST === 'undefined' || !env.__STATIC_CONTENT) {
+    //   return new Response('Static content not configured', { status: 404 });
+    // }
+
     try {
       return await getAssetFromKV(
         {
@@ -47,7 +54,7 @@ export default {
         },
         {
           ASSET_NAMESPACE: env.__STATIC_CONTENT,
-          ASSET_MANIFEST: __STATIC_CONTENT_MANIFEST,
+          ASSET_MANIFEST: manifestJSON,
         }
       );
     } catch (err) {
@@ -61,7 +68,7 @@ export default {
             },
             {
               ASSET_NAMESPACE: env.__STATIC_CONTENT,
-              ASSET_MANIFEST: __STATIC_CONTENT_MANIFEST,
+              ASSET_MANIFEST: manifestJSON,
             }
           );
         } catch (e) {
