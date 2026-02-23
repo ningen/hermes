@@ -102,8 +102,7 @@ async function executeAction(
   try {
     switch (action.type) {
       case 'notify_slack': {
-        // ユーザー設定がある場合はそれを使用、なければ環境変数をフォールバック
-        const slackWebhookUrl = userSettings?.slackWebhookUrl ?? env.SLACK_WEBHOOK_URL;
+        const slackWebhookUrl = userSettings?.slackWebhookUrl
         if (!slackWebhookUrl) {
           return {
             type: 'notify_slack',
@@ -124,8 +123,8 @@ async function executeAction(
 
       case 'create_schedule': {
         // ユーザー設定がある場合はそれを使用、なければ環境変数をフォールバック
-        const notionApiKey = userSettings?.notionApiKey ?? env.NOTION_API_KEY;
-        const notionDatabaseId = userSettings?.notionDatabaseId ?? env.NOTION_DATABASE_ID;
+        const notionApiKey = userSettings?.notionApiKey
+        const notionDatabaseId = userSettings?.notionDatabaseId
         if (!notionApiKey || !notionDatabaseId) {
           return {
             type: 'create_schedule',

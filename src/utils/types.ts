@@ -15,10 +15,6 @@ export interface Env {
   GEMINI_API_KEY: string;
   JWT_SECRET: string;                  // JWT 署名用シークレット
   ENCRYPTION_KEY: string;              // 認証情報暗号化キー
-  // レガシー環境変数（フォールバック用、マイグレーション後は削除可能）
-  SLACK_WEBHOOK_URL?: string;
-  NOTION_API_KEY?: string;
-  NOTION_DATABASE_ID?: string;
   ENVIRONMENT: string;
 }
 
