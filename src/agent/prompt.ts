@@ -1,7 +1,7 @@
 /**
  * Gemini へのプロンプト定義
  */
-import type { ParsedEmail } from '../utils/types.js';
+import type { ParsedEmail, WorkflowContext } from '../utils/types.js';
 
 /**
  * メール処理エージェントのシステムプロンプトを生成する。
@@ -55,6 +55,75 @@ ${escapePromptValue(email.body)}
     }
   ]
 }`;
+}
+
+/** 利用可能なアクション定義（メール・ワークフロー共通） */
+const ACTIONS_DEFINITION = `
+- notify_slack: 重要な内容をSlackに通知する
+  - params: { "message": "通知メッセージ" }
+
+- reply_email: 送信者に返信する（Phase 2 機能）
+  - params: { "to": "送信先アドレス", "subject": "件名", "body": "本文" }
+
+- create_schedule: スケジュール管理アプリへ登録する（Phase 2 機能）
+  - params: { "title": "タイトル", "description": "説明（省略可）", "startTime": "ISO8601形式", "endTime": "ISO8601形式（省略可）" }
+
+- ignore: 対応不要
+  - params: {}`.trim();
+
+/** JSON出力形式の指示（共通） */
+const OUTPUT_FORMAT = `
+# 出力形式
+
+必ず以下の JSON 形式のみで返答してください。JSON 以外のテキストは含めないでください。
+
+{
+  "understanding": "内容の要約（日本語で簡潔に）",
+  "actions": [
+    {
+      "type": "アクション名",
+      "params": {}
+    }
+  ]
+}`.trim();
+
+/**
+ * ワークフロー実行エージェントのプロンプトを生成する。
+ *
+ * @param wf - ワークフローコンテキスト
+ * @returns Gemini へ送るプロンプト文字列
+ */
+export function buildWorkflowPrompt(wf: WorkflowContext): string {
+  const toolSection = wf.toolResults.length > 0
+    ? `\n# 取得済みデータ\n\n${wf.toolResults
+        .map(r => `## ${r.toolName}\n\n${escapePromptValue(r.content)}`)
+        .join('\n\n')}\n`
+    : '';
+
+  const triggeredAt = new Date(wf.triggeredAt * 1000).toISOString();
+
+  return `あなたはワークフロー実行エージェントです。
+以下のユーザー指示と取得済みデータをもとに、実行すべきアクションを決定してください。
+
+# ユーザー指示
+
+${escapePromptValue(wf.prompt)}
+${toolSection}
+# 利用可能なアクション
+
+${ACTIONS_DEFINITION}
+
+# 判断基準
+
+- ユーザー指示の内容に従い、適切なアクションを選択してください
+- Slack通知やNotionへの登録など、指示に合わせて複数のアクションを組み合わせてください
+- 実行すべきことがない場合は ignore を返してください
+
+# 実行日時
+
+${triggeredAt} (UTC) / ワークフロー名: ${escapePromptValue(wf.workflowName)}
+
+${OUTPUT_FORMAT}`;
 }
 
 /**

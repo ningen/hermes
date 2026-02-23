@@ -8,6 +8,14 @@ import type { Env } from '../utils/types.js';
 import { handleAuthRegister, handleAuthLogin, handleAuthMe, handleAuthLogout } from './auth.js';
 import { handleGetEmailRoute } from './emailRoute.js';
 import { handleGetSettings, handleUpdateSettings } from './settings.js';
+import {
+  handleListTools,
+  handleListWorkflows,
+  handleCreateWorkflow,
+  handleGetWorkflow,
+  handleUpdateWorkflow,
+  handleDeleteWorkflow,
+} from './workflows.js';
 
 /**
  * API リクエストをルーティングする
@@ -51,12 +59,29 @@ export async function routeAPI(request: Request, env: Env): Promise<Response> {
     } else if (path === '/api/settings' && method === 'PUT') {
       response = await handleUpdateSettings(request, env);
     }
-
     // email route
     else if (path === '/api/email-route' && method === 'GET') {
       response = await handleGetEmailRoute(request, env);
     }
-
+    // ツール一覧（認証不要）
+    else if (path === '/api/tools' && method === 'GET') {
+      response = await handleListTools(request, env);
+    }
+    // ワークフロー
+    else if (path === '/api/workflows' && method === 'GET') {
+      response = await handleListWorkflows(request, env);
+    } else if (path === '/api/workflows' && method === 'POST') {
+      response = await handleCreateWorkflow(request, env);
+    } else if (path.startsWith('/api/workflows/') && method === 'GET') {
+      const id = path.split('/')[3];
+      response = await handleGetWorkflow(request, env, id);
+    } else if (path.startsWith('/api/workflows/') && method === 'PUT') {
+      const id = path.split('/')[3];
+      response = await handleUpdateWorkflow(request, env, id);
+    } else if (path.startsWith('/api/workflows/') && method === 'DELETE') {
+      const id = path.split('/')[3];
+      response = await handleDeleteWorkflow(request, env, id);
+    }
     // 404
     else {
       response = new Response(JSON.stringify({ error: 'Not Found' }), {

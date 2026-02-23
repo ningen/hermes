@@ -7,6 +7,7 @@
 import manifestJSON from "__STATIC_CONTENT_MANIFEST";
 import type { Env } from './utils/types.js';
 import { handleInbound } from './handlers/inbound.js';
+import { handleScheduled } from './handlers/scheduled.js';
 import { routeAPI } from './api/router.js';
 import { getAssetFromKV } from '@cloudflare/kv-asset-handler';
 
@@ -41,11 +42,6 @@ export default {
     }
 
     // 静的ファイル配信（Workers Sites）
-    // __STATIC_CONTENT_MANIFESTが定義されているかチェック
-    // if (typeof __STATIC_CONTENT_MANIFEST === 'undefined' || !env.__STATIC_CONTENT) {
-    //   return new Response('Static content not configured', { status: 404 });
-    // }
-
     try {
       return await getAssetFromKV(
         {
@@ -78,5 +74,13 @@ export default {
       console.error("[request error] Error:", err)
       return new Response('Internal Server Error', { status: 500 });
     }
+  },
+
+  /**
+   * Cron トリガーのハンドラ。
+   * wrangler.toml の [triggers] crons で設定された間隔で呼び出される。
+   */
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(handleScheduled(env));
   },
 } satisfies ExportedHandler<Env>;
