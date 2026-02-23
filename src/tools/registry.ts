@@ -7,12 +7,17 @@
  */
 import type { WorkflowTool } from './types.js';
 import { fetchUrlTool } from './fetch_url.js';
+import { rssFeedTool } from './rss_feed.js';
+import { hackerNewsTool } from './hacker_news.js';
+import { httpRequestTool } from './http_request.js';
 
 /** 利用可能なすべてのツール */
 const TOOLS: WorkflowTool[] = [
   fetchUrlTool,
+  rssFeedTool,
+  hackerNewsTool,
+  httpRequestTool,
   // 今後追加するツールはここに追記する
-  // rssFeedTool,
   // notionQueryTool,
   // githubIssuesTool,
 ];

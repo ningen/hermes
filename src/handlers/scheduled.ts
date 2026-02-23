@@ -80,7 +80,8 @@ async function executeWorkflow(
     }
 
     console.log(`[scheduled] Executing tool ${tc.toolId} for workflow ${workflow.id}`);
-    const result = await tool.execute(tc.config, env);
+    // toolResults には現時点までに完了したツールの結果のみが含まれる（このツールより前のもの）
+    const result = await tool.execute(tc.config, env, toolResults);
 
     if (result.success) {
       toolResults.push({
