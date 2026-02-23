@@ -52,24 +52,24 @@ export async function createSchedule(
           },
         },
       },
-      // 説明がある場合は children として追加
+      // 説明がある場合は children として追加（改行ごとに別ブロック）
       children: action.params.description
-        ? [
-            {
-              object: 'block',
-              type: 'paragraph',
+        ? action.params.description
+            .split('\n')
+            .map((line) => ({
+              object: 'block' as const,
+              type: 'paragraph' as const,
               paragraph: {
                 rich_text: [
                   {
-                    type: 'text',
+                    type: 'text' as const,
                     text: {
-                      content: action.params.description,
+                      content: line,
                     },
                   },
                 ],
               },
-            },
-          ]
+            }))
         : undefined,
     };
 
