@@ -8,7 +8,6 @@
 export interface NotifySlackAction {
   type: 'notify_slack';
   params: {
-    channel: string;
     message: string;
   };
 }

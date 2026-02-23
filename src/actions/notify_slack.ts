@@ -16,7 +16,6 @@ export async function notifySlack(
 ): Promise<ActionResult> {
   try {
     const payload = {
-      channel: action.params.channel,
       text: action.params.message,
     };
 

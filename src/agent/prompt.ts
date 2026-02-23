@@ -16,7 +16,7 @@ export function buildAgentPrompt(email: ParsedEmail): string {
 # 利用可能なアクション
 
 - notify_slack: 重要な内容をSlackに通知する
-  - params: { "channel": "#チャンネル名", "message": "通知メッセージ" }
+  - params: { "message": "通知メッセージ" }
 
 - reply_email: 送信者に返信する（Phase 2 機能）
   - params: { "to": "送信先アドレス", "subject": "件名", "body": "本文" }
