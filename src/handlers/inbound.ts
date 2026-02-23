@@ -10,6 +10,7 @@ import { runAgent } from '../agent/executor.js';
 import { saveMailLog } from '../db/d1.js';
 import { findEmailRoute } from '../db/routes.js';
 import { getUserSettings } from '../db/settings.js';
+import { fetchUrlTool } from '../tools/fetch_url.js';
 
 /**
  * UUID v4 を生成する（Web Crypto API を使用）
@@ -114,6 +115,13 @@ export async function handleInbound(request: Request, env: Env): Promise<Respons
     return new Response('OK', { status: 200 });
   }
 
+  // --- [4.5] メール本文のURL取得 ---
+  const fetchedUrls = await fetchEmailUrls(email.body, env);
+  if (fetchedUrls.length > 0) {
+    email.fetchedUrls = fetchedUrls;
+    console.log(`[inbound] Fetched ${fetchedUrls.length} URL(s) from email body`);
+  }
+
   // --- [5] Gemini エージェント処理 ---
   try {
     const agentResult = await runAgent({ type: 'email', data: email }, env, userSettings);
@@ -158,6 +166,40 @@ export async function handleInbound(request: Request, env: Env): Promise<Respons
 
   // Mailgun 再送防止のため常に 200 を返す
   return new Response('OK', { status: 200 });
+}
+
+/** メール本文から取得するURLの最大件数 */
+const MAX_URLS_TO_FETCH = 3;
+
+/**
+ * メール本文に含まれるURLを抽出してコンテンツを取得する。
+ * 取得失敗したURLはスキップし、メール処理全体は止めない。
+ */
+async function fetchEmailUrls(
+  body: string,
+  env: Env
+): Promise<Array<{ url: string; content: string }>> {
+  const urlPattern = /https?:\/\/[^\s<>"'()[\]{}]+/g;
+  const matches = body.match(urlPattern) ?? [];
+  // 重複を除去して上限件数に絞る
+  const urls = [...new Set(matches)].slice(0, MAX_URLS_TO_FETCH);
+
+  if (urls.length === 0) return [];
+
+  const results: Array<{ url: string; content: string }> = [];
+  for (const url of urls) {
+    try {
+      const result = await fetchUrlTool.execute({ url }, env);
+      if (result.success && result.content) {
+        results.push({ url, content: result.content });
+      } else {
+        console.warn(`[inbound] fetchEmailUrls: failed to fetch ${url}: ${result.error}`);
+      }
+    } catch (err) {
+      console.warn(`[inbound] fetchEmailUrls: error fetching ${url}:`, err);
+    }
+  }
+  return results;
 }
 
 /**

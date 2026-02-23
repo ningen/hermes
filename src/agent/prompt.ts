@@ -10,6 +10,12 @@ import type { ParsedEmail, WorkflowContext } from '../utils/types.js';
  * @returns Gemini へ送るプロンプト文字列
  */
 export function buildAgentPrompt(email: ParsedEmail): string {
+  const urlSection = email.fetchedUrls && email.fetchedUrls.length > 0
+    ? `\n# リンク先コンテンツ\n\n${email.fetchedUrls
+        .map(({ url, content }) => `## ${url}\n\n${escapePromptValue(content)}`)
+        .join('\n\n')}\n`
+    : '';
+
   return `あなたはメール処理エージェントです。
 受信メールの内容を理解し、実行すべきアクションを決定してください。
 
@@ -41,7 +47,7 @@ export function buildAgentPrompt(email: ParsedEmail): string {
 宛先: ${escapePromptValue(email.to)}
 本文:
 ${escapePromptValue(email.body)}
-
+${urlSection}
 # 出力形式
 
 必ず以下の JSON 形式のみで返答してください。JSON 以外のテキストは含めないでください。
