@@ -31,6 +31,18 @@ export interface ToolResult {
 }
 
 /**
+ * 前のツールの実行結果（テンプレート補間に使用）
+ *
+ * http_request などのツールが config 内で `{{tool_id}}` と書くと、
+ * 対応するツールの content に置換される。
+ */
+export interface PreviousToolResult {
+  toolId: string;
+  toolName: string;
+  content: string;
+}
+
+/**
  * ワークフローツールのインターフェース
  * すべてのツールはこのインターフェースを実装する
  */
@@ -47,6 +59,7 @@ export interface WorkflowTool {
    * ツールを実行してコンテキストを返す
    * @param config ユーザーが設定した値（キーはconfigSchemaのkey）
    * @param env Workers環境変数
+   * @param previousResults このツールより前に実行されたツールの結果（テンプレート補間用）
    */
-  execute(config: Record<string, string>, env: Env): Promise<ToolResult>;
+  execute(config: Record<string, string>, env: Env, previousResults?: PreviousToolResult[]): Promise<ToolResult>;
 }

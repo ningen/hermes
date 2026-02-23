@@ -5,7 +5,7 @@
  * カスタムヘッダーやリクエストボディも設定可能。
  * 認証が必要なAPIや、POSTリクエストが必要なケースに対応する。
  */
-import type { WorkflowTool, ToolResult } from './types.js';
+import type { WorkflowTool, ToolResult, PreviousToolResult } from './types.js';
 
 /** レスポンス本文の最大文字数 */
 const MAX_CONTENT_LENGTH = 8000;
@@ -51,12 +51,15 @@ export const httpRequestTool: WorkflowTool = {
       type: 'textarea',
       required: false,
       placeholder: '{"key": "value"}',
-      description: 'POST/PUT/PATCH時のリクエストボディ（省略可）',
+      description: 'POST/PUT/PATCH時のリクエストボディ（省略可）。{{tool_id}} で前のツール結果を埋め込める。',
     },
   ],
 
-  async execute(config): Promise<ToolResult> {
-    const url = config['url'];
+  async execute(config, _env, previousResults?: PreviousToolResult[]): Promise<ToolResult> {
+    const prev = previousResults ?? [];
+
+    // {{tool_id}} テンプレートを前のツール結果で補間する
+    const url = interpolate(config['url'] ?? '', prev);
     if (!url) {
       return { success: false, content: '', error: 'URLが設定されていません' };
     }
@@ -72,12 +75,12 @@ export const httpRequestTool: WorkflowTool = {
     }
     const method = rawMethod as HttpMethod;
 
-    // カスタムヘッダーのパース
+    // カスタムヘッダーのパース（値も補間対象）
     const customHeaders: Record<string, string> = {};
     const rawHeaders = config['headers']?.trim();
     if (rawHeaders) {
       try {
-        const parsed = JSON.parse(rawHeaders);
+        const parsed = JSON.parse(interpolate(rawHeaders, prev));
         if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
           return { success: false, content: '', error: 'ヘッダーはオブジェクト形式のJSONで指定してください' };
         }
@@ -94,7 +97,7 @@ export const httpRequestTool: WorkflowTool = {
       ...customHeaders,
     };
 
-    const body = config['body']?.trim() || undefined;
+    const body = config['body']?.trim() ? interpolate(config['body'].trim(), prev) : undefined;
 
     // GETにボディは付与しない
     const fetchInit: RequestInit = {
@@ -155,6 +158,20 @@ export const httpRequestTool: WorkflowTool = {
     return { success: true, content: resultHeader };
   },
 };
+
+/**
+ * テンプレート文字列内の {{tool_id}} を前のツール結果の content で置換する。
+ * 対応する tool_id が見つからない場合はプレースホルダをそのまま残す。
+ *
+ * 例: body = '{"text": "{{rss_feed}}"}' のとき、
+ *     rss_feed の content に置換される。
+ */
+function interpolate(template: string, previousResults: PreviousToolResult[]): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_match, toolId: string) => {
+    const result = previousResults.find(r => r.toolId === toolId);
+    return result ? result.content : `{{${toolId}}}`;
+  });
+}
 
 /** HTMLからタグを除去してプレーンテキストに変換する */
 function stripHtml(html: string): string {
