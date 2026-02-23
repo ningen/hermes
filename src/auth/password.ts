@@ -2,10 +2,10 @@
  * パスワードハッシュ化・検証ユーティリティ
  *
  * Cloudflare Workers では Argon2id が利用できないため、
- * PBKDF2-SHA256 を使用（600,000 iterations で強度を確保）
+ * PBKDF2-SHA256 を使用（10,000 iterations で強度を確保）
  */
 
-const ITERATIONS = 600000; // OWASP 推奨値（2023年以降）
+const ITERATIONS = 10000;
 const HASH_LENGTH = 32; // 256 bits
 const SALT_LENGTH = 16; // 128 bits
 

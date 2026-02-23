@@ -25,7 +25,7 @@ Hermesは、Mailgun経由で受信したメールをGemini AIで処理し、Slac
 - React Router
 
 ### セキュリティ
-- パスワード: PBKDF2-SHA256（600,000 iterations）
+- パスワード: PBKDF2-SHA256（10,000 iterations）
 - 認証情報暗号化: AES-256-GCM
 - JWT: HMAC-SHA256
 
