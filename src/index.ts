@@ -80,7 +80,7 @@ export default {
    * Cron トリガーのハンドラ。
    * wrangler.toml の [triggers] crons で設定された間隔で呼び出される。
    */
-  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
     ctx.waitUntil(handleScheduled(env));
   },
 } satisfies ExportedHandler<Env>;
