@@ -8,6 +8,7 @@ import { generateJWT } from '../auth/jwt.js';
 import { saveSession, deleteSession } from '../auth/session.js';
 import { createUser, findUserByEmail, findUserById } from '../db/users.js';
 import { requireAuth } from '../auth/middleware.js';
+import { createEmailRoute } from '../db/routes.js';
 
 /**
  * POST /api/auth/register
@@ -62,6 +63,11 @@ export async function handleAuthRegister(request: Request, env: Env): Promise<Re
     // ユーザーを作成
     const userId = crypto.randomUUID();
     const user = await createUser(env.DB, userId, body.email, passwordHash, body.name || null);
+
+    // email route を作成
+    // TODO: 本当は、UUID をさらにhash にしたりしたほうがいいかも?
+    const emailPrefix = crypto.randomUUID()
+    await createEmailRoute(env.DB, `${emailPrefix}@${env.MAILGUN_DOMAIN}`, user.id)
 
     // JWT を生成
     const token = await generateJWT(user.id, user.email, env.JWT_SECRET);

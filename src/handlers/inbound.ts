@@ -67,7 +67,7 @@ export async function handleInbound(request: Request, env: Env): Promise<Respons
 
   // --- [3.5] メールルーティング（マルチユーザー対応） ---
   let userId: string | null = null;
-  let userSettings: { slackWebhookUrl?: string; notionApiKey?: string; notionDatabaseId?: string } | null = null;
+  let userSettings: { replyEmailAddress?: string, slackWebhookUrl?: string; notionApiKey?: string; notionDatabaseId?: string } | null = null;
 
   // 受信メールアドレスからユーザーを検索
   const emailRoute = await findEmailRoute(env.DB, email.to);
@@ -79,6 +79,7 @@ export async function handleInbound(request: Request, env: Env): Promise<Respons
     const settings = await getUserSettings(env.DB, userId, env.ENCRYPTION_KEY);
     if (settings) {
       userSettings = {
+        replyEmailAddress: emailRoute.emailAddress,
         slackWebhookUrl: settings.slackWebhookUrl ?? undefined,
         notionApiKey: settings.notionApiKey ?? undefined,
         notionDatabaseId: settings.notionDatabaseId ?? undefined,

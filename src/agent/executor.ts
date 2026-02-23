@@ -32,6 +32,7 @@ export async function runAgent(
   email: ParsedEmail,
   env: Env,
   userSettings?: {
+    replyEmailAddress?: string;
     slackWebhookUrl?: string;
     notionApiKey?: string;
     notionDatabaseId?: string;
@@ -66,6 +67,7 @@ async function executeActions(
   actions: Action[],
   env: Env,
   userSettings?: {
+    replyEmailAddress?: string;
     slackWebhookUrl?: string;
     notionApiKey?: string;
     notionDatabaseId?: string;
@@ -94,6 +96,7 @@ async function executeAction(
   action: Action,
   env: Env,
   userSettings?: {
+    replyEmailAddress?: string;
     slackWebhookUrl?: string;
     notionApiKey?: string;
     notionDatabaseId?: string;
@@ -114,11 +117,18 @@ async function executeAction(
       }
 
       case 'reply_email':
+        if (!userSettings?.replyEmailAddress) {
+          return {
+            type: "reply_email",
+            success: false,
+            error: "replyEmailAddress is not configured"
+          }
+        }
         return await replyEmail(
           action,
           env.MAILGUN_API_KEY,
           env.MAILGUN_DOMAIN,
-          env.FROM_ADDRESS
+          userSettings?.replyEmailAddress
         );
 
       case 'create_schedule': {
