@@ -5,7 +5,11 @@ compatibility_date = "2024-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "hermes-db"
-database_id = "<YOUR_D1_DATABASE_ID>"
+database_id = "d5362889-7590-477d-b8e2-0956b84fbcab"
 
 [vars]
 ENVIRONMENT = "production"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
