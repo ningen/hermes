@@ -82,11 +82,11 @@ export async function findEmailRoute(
 export async function getEmailRoutesByUserId(
   db: D1Database,
   userId: string
-): Promise<EmailRoute[]> {
-  const results = await db
+): Promise<EmailRoute | null> {
+  const result = await db
     .prepare(`SELECT * FROM email_routes WHERE user_id = ? ORDER BY created_at DESC`)
     .bind(userId)
-    .all<{
+    .first<{
       id: string;
       email_address: string;
       user_id: string;
@@ -94,13 +94,17 @@ export async function getEmailRoutesByUserId(
       created_at: number;
     }>();
 
-  return results.results.map((row) => ({
-    id: row.id,
-    emailAddress: row.email_address,
-    userId: row.user_id,
-    isActive: row.is_active === 1,
-    createdAt: row.created_at,
-  }));
+  if (!result) {
+    return null
+  }
+
+  return {
+    id: result.id,
+    emailAddress: result.email_address,
+    userId: result.user_id,
+    isActive: result.is_active === 1,
+    createdAt: result.created_at
+  };
 }
 
 /**

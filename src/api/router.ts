@@ -6,6 +6,7 @@
 
 import type { Env } from '../utils/types.js';
 import { handleAuthRegister, handleAuthLogin, handleAuthMe, handleAuthLogout } from './auth.js';
+import { handleGetEmailRoute } from './emailRoute.js';
 import { handleGetSettings, handleUpdateSettings } from './settings.js';
 
 /**
@@ -50,6 +51,12 @@ export async function routeAPI(request: Request, env: Env): Promise<Response> {
     } else if (path === '/api/settings' && method === 'PUT') {
       response = await handleUpdateSettings(request, env);
     }
+
+    // email route
+    else if (path === '/email_routes' && method === 'GET') {
+      response = await handleGetEmailRoute(request, env);
+    }
+
     // 404
     else {
       response = new Response(JSON.stringify({ error: 'Not Found' }), {
