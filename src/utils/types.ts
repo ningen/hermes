@@ -29,6 +29,8 @@ export interface ParsedEmail {
   body: string;
   messageId: string;
   timestamp: number;
+  /** メール本文から抽出・取得したURLのコンテンツ */
+  fetchedUrls?: Array<{ url: string; content: string }>;
 }
 
 /**
