@@ -68,7 +68,7 @@ export default {
           return new Response('Not Found', { status: 404 });
         }
       }
-
+      console.error("[request error] Error:", err)
       return new Response('Internal Server Error', { status: 500 });
     }
   },
