@@ -7,7 +7,7 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
-  const { user, logout } = useAuth();
+  const { user, emailRoute, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
@@ -28,7 +28,7 @@ export default function Layout({ children }: LayoutProps) {
               {user && (
                 <>
                   <span className="text-sm text-gray-700">
-                    {user.name || user.email}
+                    {user.name || user.email}{emailRoute && `(${emailRoute.emailAddress})`}
                   </span>
                   <button
                     onClick={handleLogout}
