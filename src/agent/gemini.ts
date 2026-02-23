@@ -79,7 +79,7 @@ async function fetchGemini(prompt: string, apiKey: string): Promise<GeminiRespon
     generationConfig: {
       responseMimeType: 'application/json',
       temperature: 0.1,
-      maxOutputTokens: 1024,
+      maxOutputTokens: 2048,
     },
   };
 
