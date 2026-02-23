@@ -7,10 +7,10 @@ import type { GeminiResponse } from '../actions/types.js';
 
 /**
  * Gemini API のエンドポイント
- * gemini-2.0-flash-lite を使用してコストと速度を最適化
+ * gemini-2.5-flash を使用
  */
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-const GEMINI_MODEL = 'gemini-2.0-flash-lite';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 /**
  * リトライの最大回数
