@@ -4,13 +4,13 @@
  * Gemini が決定したアクションを順次実行し、結果を収集する。
  * 1 つのアクションが失敗しても、他のアクションの実行は継続する。
  */
-import type { Env, ParsedEmail } from '../utils/types.js';
+import type { Env, InputContext } from '../utils/types.js';
 import type { Action, ActionResult, GeminiResponse } from '../actions/types.js';
 import { notifySlack } from '../actions/notify_slack.js';
 import { replyEmail } from '../actions/reply_email.js';
 import { createSchedule } from '../actions/create_schedule.js';
 import { callGemini } from './gemini.js';
-import { buildAgentPrompt } from './prompt.js';
+import { buildAgentPrompt, buildWorkflowPrompt } from './prompt.js';
 
 /**
  * エージェントの処理結果
@@ -20,32 +20,38 @@ export interface AgentResult {
   actionResults: ActionResult[];
 }
 
+type UserSettings = {
+  replyEmailAddress?: string;
+  slackWebhookUrl?: string;
+  notionApiKey?: string;
+  notionDatabaseId?: string;
+} | null | undefined;
+
 /**
- * メールを Gemini エージェントで処理し、アクションを実行する。
+ * 入力コンテキスト（メールまたはワークフロー）を Gemini エージェントで処理し、アクションを実行する。
  *
- * @param email - パース済みメール情報
- * @param env   - 環境変数バインディング
- * @param userSettings - ユーザー固有の設定（オプション、マルチユーザー対応）
+ * @param context  - 入力コンテキスト
+ * @param env      - 環境変数バインディング
+ * @param userSettings - ユーザー固有の設定
  * @returns エージェントの処理結果
  */
 export async function runAgent(
-  email: ParsedEmail,
+  context: InputContext,
   env: Env,
-  userSettings?: {
-    replyEmailAddress?: string;
-    slackWebhookUrl?: string;
-    notionApiKey?: string;
-    notionDatabaseId?: string;
-  } | null
+  userSettings?: UserSettings
 ): Promise<AgentResult> {
-  // 1. Gemini にプロンプトを送信してアクションを決定
-  const prompt = buildAgentPrompt(email);
+  // 1. コンテキスト種別に応じたプロンプトを生成
+  const prompt = context.type === 'email'
+    ? buildAgentPrompt(context.data)
+    : buildWorkflowPrompt(context.data);
+
+  // 2. Gemini にプロンプトを送信してアクションを決定
   const geminiResponse: GeminiResponse = await callGemini(prompt, env.GEMINI_API_KEY);
 
   console.log('[executor] Gemini understanding:', geminiResponse.understanding);
   console.log('[executor] Gemini actions:', JSON.stringify(geminiResponse.actions));
 
-  // 2. 各アクションを並列実行
+  // 3. 各アクションを実行
   const actionResults = await executeActions(geminiResponse.actions, env, userSettings);
 
   return {
@@ -57,21 +63,11 @@ export async function runAgent(
 /**
  * アクションリストを実行する。
  * エラーが発生した場合もスキップせず全アクションを試みる。
- *
- * @param actions - 実行するアクションのリスト
- * @param env     - 環境変数バインディング
- * @param userSettings - ユーザー固有の設定
- * @returns 各アクションの実行結果
  */
 async function executeActions(
   actions: Action[],
   env: Env,
-  userSettings?: {
-    replyEmailAddress?: string;
-    slackWebhookUrl?: string;
-    notionApiKey?: string;
-    notionDatabaseId?: string;
-  } | null
+  userSettings?: UserSettings
 ): Promise<ActionResult[]> {
   const results: ActionResult[] = [];
 
@@ -95,17 +91,12 @@ async function executeActions(
 async function executeAction(
   action: Action,
   env: Env,
-  userSettings?: {
-    replyEmailAddress?: string;
-    slackWebhookUrl?: string;
-    notionApiKey?: string;
-    notionDatabaseId?: string;
-  } | null
+  userSettings?: UserSettings
 ): Promise<ActionResult> {
   try {
     switch (action.type) {
       case 'notify_slack': {
-        const slackWebhookUrl = userSettings?.slackWebhookUrl
+        const slackWebhookUrl = userSettings?.slackWebhookUrl;
         if (!slackWebhookUrl) {
           return {
             type: 'notify_slack',
@@ -119,22 +110,21 @@ async function executeAction(
       case 'reply_email':
         if (!userSettings?.replyEmailAddress) {
           return {
-            type: "reply_email",
+            type: 'reply_email',
             success: false,
-            error: "replyEmailAddress is not configured"
-          }
+            error: 'replyEmailAddress is not configured',
+          };
         }
         return await replyEmail(
           action,
           env.MAILGUN_API_KEY,
           env.MAILGUN_DOMAIN,
-          userSettings?.replyEmailAddress
+          userSettings.replyEmailAddress
         );
 
       case 'create_schedule': {
-        // ユーザー設定がある場合はそれを使用、なければ環境変数をフォールバック
-        const notionApiKey = userSettings?.notionApiKey
-        const notionDatabaseId = userSettings?.notionDatabaseId
+        const notionApiKey = userSettings?.notionApiKey;
+        const notionDatabaseId = userSettings?.notionDatabaseId;
         if (!notionApiKey || !notionDatabaseId) {
           return {
             type: 'create_schedule',
@@ -150,7 +140,6 @@ async function executeAction(
         return { type: 'ignore', success: true };
 
       default: {
-        // 未知のアクションタイプ（型安全のための exhaustive check）
         const unknownAction = action as { type: string };
         return {
           type: 'ignore',

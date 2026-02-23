@@ -35,6 +35,10 @@ ENVIRONMENT = "production"
 # マルチユーザー移行後もフォールバックとして使用可能ですが、
 # ユーザー設定に移行後は削除することを推奨します。
 
+[triggers]
+# 毎時0分に起動してワークフローをスキャンする
+crons = ["0 * * * *"]
+
 [observability.logs]
 enabled = true
 invocation_logs = true

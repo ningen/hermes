@@ -5,6 +5,8 @@ import LoginForm from './components/auth/LoginForm';
 import RegisterForm from './components/auth/RegisterForm';
 import Layout from './components/layout/Layout';
 import SettingsForm from './components/settings/SettingsForm';
+import WorkflowsPage from './pages/WorkflowsPage';
+import WorkflowFormPage from './pages/WorkflowFormPage';
 
 function App() {
   return (
@@ -22,7 +24,37 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/" element={<Navigate to="/settings" replace />} />
+        <Route
+          path="/workflows"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <WorkflowsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/workflows/new"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <WorkflowFormPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/workflows/:id/edit"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <WorkflowFormPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/" element={<Navigate to="/workflows" replace />} />
       </Routes>
     </AuthProvider>
   );

@@ -6,6 +6,7 @@
  * Cloudflare Workers の環境変数バインディング
  */
 export interface Env {
+  // NOTE: scheduled handler も同じ Env を使用する
   DB: D1Database;
   SESSIONS?: KVNamespace;              // セッション管理用 KV（オプション）
   __STATIC_CONTENT?: KVNamespace;      // Workers Sites 用 KV（自動バインド）
@@ -49,3 +50,28 @@ export interface MailgunPayload {
  * 処理ログのステータス
  */
 export type MailLogStatus = 'processed' | 'filtered' | 'error';
+
+/**
+ * ワークフロー実行時にエージェントへ渡すコンテキスト
+ */
+export interface WorkflowContext {
+  workflowId: string;
+  workflowName: string;
+  /** ユーザーが定義した「何をしてほしいか」の指示 */
+  prompt: string;
+  triggeredAt: number;
+  /** 事前実行されたツールの出力（エージェントのコンテキストに注入される） */
+  toolResults: Array<{
+    toolId: string;
+    toolName: string;
+    content: string;
+  }>;
+}
+
+/**
+ * エージェントへの入力コンテキスト
+ * メールとワークフローを統一的に扱う
+ */
+export type InputContext =
+  | { type: 'email'; data: ParsedEmail }
+  | { type: 'workflow'; data: WorkflowContext };

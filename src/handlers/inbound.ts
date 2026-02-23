@@ -116,7 +116,7 @@ export async function handleInbound(request: Request, env: Env): Promise<Respons
 
   // --- [5] Gemini エージェント処理 ---
   try {
-    const agentResult = await runAgent(email, env, userSettings);
+    const agentResult = await runAgent({ type: 'email', data: email }, env, userSettings);
 
     // --- [6] D1 へ処理ログ保存 ---
     try {
