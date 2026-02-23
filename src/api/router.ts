@@ -53,7 +53,7 @@ export async function routeAPI(request: Request, env: Env): Promise<Response> {
     }
 
     // email route
-    else if (path === '/email-route' && method === 'GET') {
+    else if (path === '/api/email-route' && method === 'GET') {
       response = await handleGetEmailRoute(request, env);
     }
 
