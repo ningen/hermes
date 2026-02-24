@@ -22,6 +22,10 @@ export async function handleGetSettings(request: Request, env: Env): Promise<Res
             slackWebhookUrl: null,
             notionApiKey: null,
             notionDatabaseId: null,
+            slackBotToken: null,
+            slackSigningSecret: null,
+            slackInboundToken: null,
+            slackAllowedUserIds: null,
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
         );
@@ -32,6 +36,10 @@ export async function handleGetSettings(request: Request, env: Env): Promise<Res
           slackWebhookUrl: settings.slackWebhookUrl,
           notionApiKey: settings.notionApiKey,
           notionDatabaseId: settings.notionDatabaseId,
+          slackBotToken: settings.slackBotToken,
+          slackSigningSecret: settings.slackSigningSecret,
+          slackInboundToken: settings.slackInboundToken,
+          slackAllowedUserIds: settings.slackAllowedUserIds,
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
@@ -56,6 +64,9 @@ export async function handleUpdateSettings(request: Request, env: Env): Promise<
         slackWebhookUrl?: string | null;
         notionApiKey?: string | null;
         notionDatabaseId?: string | null;
+        slackBotToken?: string | null;
+        slackSigningSecret?: string | null;
+        slackAllowedUserIds?: string | null;
       };
 
       // 設定を保存
@@ -68,6 +79,10 @@ export async function handleUpdateSettings(request: Request, env: Env): Promise<
             slackWebhookUrl: settings.slackWebhookUrl,
             notionApiKey: settings.notionApiKey,
             notionDatabaseId: settings.notionDatabaseId,
+            slackBotToken: settings.slackBotToken,
+            slackSigningSecret: settings.slackSigningSecret,
+            slackInboundToken: settings.slackInboundToken,
+            slackAllowedUserIds: settings.slackAllowedUserIds,
           },
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }

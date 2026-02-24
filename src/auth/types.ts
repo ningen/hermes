@@ -22,6 +22,14 @@ export interface UserSettings {
   slackWebhookUrl: string | null;
   notionApiKey: string | null;
   notionDatabaseId: string | null;
+  /** Slack インバウンド: Bot User OAuth Token (xoxb-...) */
+  slackBotToken: string | null;
+  /** Slack インバウンド: Slack App の Signing Secret */
+  slackSigningSecret: string | null;
+  /** Slack インバウンド: Webhook URL に使うユーザー固有トークン（UUID） */
+  slackInboundToken: string | null;
+  /** Slack インバウンド: 許可する Slack User ID（カンマ区切り） */
+  slackAllowedUserIds: string | null;
   createdAt: number;
   updatedAt: number;
 }

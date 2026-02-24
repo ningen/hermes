@@ -1,7 +1,7 @@
 /**
  * Gemini へのプロンプト定義
  */
-import type { ParsedEmail, WorkflowContext } from '../utils/types.js';
+import type { ParsedEmail, WorkflowContext, SlackMessageContext } from '../utils/types.js';
 
 /**
  * メール処理エージェントのシステムプロンプトを生成する。
@@ -77,6 +77,20 @@ const ACTIONS_DEFINITION = `
 - ignore: 対応不要
   - params: {}`.trim();
 
+/** Slack インバウンド用の利用可能なアクション定義 */
+const SLACK_ACTIONS_DEFINITION = `
+- reply_slack: Slack メッセージに直接返信する（最優先）
+  - params: { "message": "返信メッセージ（Markdown 可）" }
+
+- notify_slack: 別の Slack チャンネルへ通知する
+  - params: { "message": "通知メッセージ" }
+
+- create_schedule: スケジュール管理アプリへ登録する
+  - params: { "title": "タイトル", "description": "説明（省略可）", "startTime": "ISO8601形式", "endTime": "ISO8601形式（省略可）" }
+
+- ignore: 対応不要
+  - params: {}`.trim();
+
 /** JSON出力形式の指示（共通） */
 const OUTPUT_FORMAT = `
 # 出力形式
@@ -128,6 +142,39 @@ ${ACTIONS_DEFINITION}
 # 実行日時
 
 ${triggeredAt} (UTC) / ワークフロー名: ${escapePromptValue(wf.workflowName)}
+
+${OUTPUT_FORMAT}`;
+}
+
+/**
+ * Slack メッセージ処理エージェントのプロンプトを生成する。
+ *
+ * @param ctx - Slack メッセージコンテキスト
+ * @returns Gemini へ送るプロンプト文字列
+ */
+export function buildSlackPrompt(ctx: SlackMessageContext): string {
+  const triggeredAt = new Date(ctx.triggeredAt * 1000).toISOString();
+
+  return `あなたは Slack メッセージ処理エージェントです。
+ユーザーからの Slack メッセージを理解し、適切なアクションを決定してください。
+
+# 利用可能なアクション
+
+${SLACK_ACTIONS_DEFINITION}
+
+# 判断基準
+
+- 質問・依頼・相談 → reply_slack で直接返答する
+- スケジュール登録の依頼 → create_schedule（必要なら reply_slack で確認も）
+- 他チャンネルへの共有が必要な場合 → notify_slack
+- 意味のない入力や対応不要 → ignore
+
+# 受信メッセージ
+
+送信者 Slack User ID: ${escapePromptValue(ctx.slackUserId)}
+受信日時: ${triggeredAt} (UTC)
+メッセージ:
+${escapePromptValue(ctx.text)}
 
 ${OUTPUT_FORMAT}`;
 }

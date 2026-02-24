@@ -38,6 +38,17 @@ export interface CreateScheduleAction {
 }
 
 /**
+ * Slack 返信アクション（Slack インバウンドメッセージへの返信）
+ */
+export interface ReplySlackAction {
+  type: 'reply_slack';
+  params: {
+    /** 返信メッセージ本文 */
+    message: string;
+  };
+}
+
+/**
  * 無視アクション
  */
 export interface IgnoreAction {
@@ -52,6 +63,7 @@ export type Action =
   | NotifySlackAction
   | ReplyEmailAction
   | CreateScheduleAction
+  | ReplySlackAction
   | IgnoreAction;
 
 /**
