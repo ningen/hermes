@@ -1,13 +1,16 @@
-name: Deploy to Production
+name: CI
 
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  deploy:
-    name: Build & Deploy
+  ci:
+    name: Typecheck & Build
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -32,19 +35,3 @@ jobs:
 
       - name: Build frontend
         run: cd frontend && npm run build
-
-      # D1 マイグレーションを自動適用する場合は以下のコメントを外してください。
-      # 本番 DB への変更は慎重に行うため、デフォルトは無効にしています。
-      #
-      # - name: Apply D1 migrations
-      #   uses: cloudflare/wrangler-action@v3
-      #   with:
-      #     apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      #     accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      #     command: d1 migrations apply hermes-db
-
-      - name: Deploy to Cloudflare Workers
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
