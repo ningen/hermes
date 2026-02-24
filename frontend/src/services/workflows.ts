@@ -11,12 +11,21 @@ export interface WorkflowToolConfig {
   orderIndex: number;
 }
 
+export interface WorkflowActionConfig {
+  id: string;
+  workflowId: string;
+  actionType: string;
+  paramsTemplate: Record<string, string>;
+  orderIndex: number;
+}
+
 export interface Workflow {
   id: string;
   userId: string;
   name: string;
   schedule: string;
   prompt: string;
+  mode: 'llm' | 'direct';
   isActive: boolean;
   lastRunAt: number | null;
   createdAt: number;
@@ -24,13 +33,16 @@ export interface Workflow {
 
 export interface WorkflowWithTools extends Workflow {
   tools: WorkflowToolConfig[];
+  actions: WorkflowActionConfig[];
 }
 
 export interface WorkflowInput {
   name: string;
   schedule: string;
   prompt: string;
+  mode: 'llm' | 'direct';
   tools: Array<{ toolId: string; config: Record<string, string>; orderIndex: number }>;
+  actions: Array<{ actionType: string; paramsTemplate: Record<string, string>; orderIndex: number }>;
 }
 
 export async function listWorkflows(token: string): Promise<Workflow[]> {
