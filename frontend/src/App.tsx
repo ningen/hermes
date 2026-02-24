@@ -7,6 +7,7 @@ import Layout from './components/layout/Layout';
 import SettingsForm from './components/settings/SettingsForm';
 import WorkflowsPage from './pages/WorkflowsPage';
 import WorkflowFormPage from './pages/WorkflowFormPage';
+import OnboardingPage from './pages/OnboardingPage';
 
 function App() {
   return (
@@ -50,6 +51,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <WorkflowFormPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <OnboardingPage />
               </Layout>
             </ProtectedRoute>
           }
