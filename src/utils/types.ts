@@ -82,9 +82,26 @@ export interface WorkflowContext {
 }
 
 /**
+ * Slack メッセージ受信時にエージェントへ渡すコンテキスト
+ */
+export interface SlackMessageContext {
+  /** メッセージ本文 */
+  text: string;
+  /** 送信者の Slack User ID（例: U1234XXXXX） */
+  slackUserId: string;
+  /** 返信先チャンネル ID */
+  channelId: string;
+  /** スレッド内返信用の ts（DM スレッドなど） */
+  threadTs?: string;
+  /** 受信時刻（Unix timestamp） */
+  triggeredAt: number;
+}
+
+/**
  * エージェントへの入力コンテキスト
- * メールとワークフローを統一的に扱う
+ * メール・ワークフロー・Slack メッセージを統一的に扱う
  */
 export type InputContext =
   | { type: 'email'; data: ParsedEmail }
-  | { type: 'workflow'; data: WorkflowContext };
+  | { type: 'workflow'; data: WorkflowContext }
+  | { type: 'slack_message'; data: SlackMessageContext };

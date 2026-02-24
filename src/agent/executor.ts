@@ -9,8 +9,9 @@ import type { Action, ActionResult, GeminiResponse } from '../actions/types.js';
 import { notifySlack } from '../actions/notify_slack.js';
 import { replyEmail } from '../actions/reply_email.js';
 import { createSchedule } from '../actions/create_schedule.js';
+import { replySlack } from '../actions/reply_slack.js';
 import { callGemini } from './gemini.js';
-import { buildAgentPrompt, buildWorkflowPrompt } from './prompt.js';
+import { buildAgentPrompt, buildWorkflowPrompt, buildSlackPrompt } from './prompt.js';
 
 /**
  * エージェントの処理結果
@@ -21,11 +22,20 @@ export interface AgentResult {
 }
 
 type UserSettings = {
-  replyEmailAddress?: string;
-  slackWebhookUrl?: string;
-  notionApiKey?: string;
-  notionDatabaseId?: string;
+  replyEmailAddress?: string | null;
+  slackWebhookUrl?: string | null;
+  notionApiKey?: string | null;
+  notionDatabaseId?: string | null;
+  slackBotToken?: string | null;
 } | null | undefined;
+
+/**
+ * reply_slack アクション実行に必要なコンテキスト情報
+ */
+type SlackReplyContext = {
+  channelId: string;
+  threadTs?: string;
+};
 
 /**
  * 入力コンテキスト（メールまたはワークフロー）を処理し、アクションを実行する。
@@ -36,12 +46,14 @@ type UserSettings = {
  * @param context  - 入力コンテキスト
  * @param env      - 環境変数バインディング
  * @param userSettings - ユーザー固有の設定
+ * @param slackReplyCtx - Slack 返信コンテキスト（slack_message 時のみ使用）
  * @returns エージェントの処理結果
  */
 export async function runAgent(
   context: InputContext,
   env: Env,
-  userSettings?: UserSettings
+  userSettings?: UserSettings,
+  slackReplyCtx?: SlackReplyContext
 ): Promise<AgentResult> {
   // direct モードのワークフローは LLM をバイパスする
   if (context.type === 'workflow' && context.data.mode === 'direct') {
@@ -49,9 +61,14 @@ export async function runAgent(
   }
 
   // 1. コンテキスト種別に応じたプロンプトを生成
-  const prompt = context.type === 'email'
-    ? buildAgentPrompt(context.data)
-    : buildWorkflowPrompt(context.data);
+  let prompt: string;
+  if (context.type === 'email') {
+    prompt = buildAgentPrompt(context.data);
+  } else if (context.type === 'workflow') {
+    prompt = buildWorkflowPrompt(context.data);
+  } else {
+    prompt = buildSlackPrompt(context.data);
+  }
 
   // 2. Gemini にプロンプトを送信してアクションを決定
   const geminiResponse: GeminiResponse = await callGemini(prompt, env.GEMINI_API_KEY);
@@ -60,7 +77,7 @@ export async function runAgent(
   console.log('[executor] Gemini actions:', JSON.stringify(geminiResponse.actions));
 
   // 3. 各アクションを実行
-  const actionResults = await executeActions(geminiResponse.actions, env, userSettings);
+  const actionResults = await executeActions(geminiResponse.actions, env, userSettings, slackReplyCtx);
 
   return {
     understanding: geminiResponse.understanding,
@@ -123,12 +140,13 @@ function expandTemplates(
 async function executeActions(
   actions: Action[],
   env: Env,
-  userSettings?: UserSettings
+  userSettings?: UserSettings,
+  slackReplyCtx?: SlackReplyContext
 ): Promise<ActionResult[]> {
   const results: ActionResult[] = [];
 
   for (const action of actions) {
-    const result = await executeAction(action, env, userSettings);
+    const result = await executeAction(action, env, userSettings, slackReplyCtx);
     results.push(result);
 
     if (!result.success) {
@@ -147,7 +165,8 @@ async function executeActions(
 async function executeAction(
   action: Action,
   env: Env,
-  userSettings?: UserSettings
+  userSettings?: UserSettings,
+  slackReplyCtx?: SlackReplyContext
 ): Promise<ActionResult> {
   try {
     switch (action.type) {
@@ -189,6 +208,21 @@ async function executeAction(
           };
         }
         return await createSchedule(action, notionApiKey, notionDatabaseId);
+      }
+
+      case 'reply_slack': {
+        const botToken = userSettings?.slackBotToken;
+        const channelId = slackReplyCtx?.channelId;
+        if (!botToken || !channelId) {
+          return {
+            type: 'reply_slack',
+            success: false,
+            error: !botToken
+              ? 'Slack bot token not configured'
+              : 'Slack channel ID not available (reply_slack requires slack_message context)',
+          };
+        }
+        return await replySlack(action, botToken, channelId, slackReplyCtx?.threadTs);
       }
 
       case 'ignore':

@@ -8,6 +8,7 @@ import manifestJSON from "__STATIC_CONTENT_MANIFEST";
 import type { Env } from './utils/types.js';
 import { handleInbound } from './handlers/inbound.js';
 import { handleScheduled } from './handlers/scheduled.js';
+import { handleSlackEvent } from './handlers/slack.js';
 import { routeAPI } from './api/router.js';
 import { getAssetFromKV } from '@cloudflare/kv-asset-handler';
 
@@ -31,6 +32,12 @@ export default {
     // Mailgun Inbound Parse のエンドポイント
     if (request.method === 'POST' && url.pathname === '/inbound') {
       return handleInbound(request, env);
+    }
+
+    // Slack Event API エンドポイント（ユーザー固有トークン付き）
+    const slackMatch = url.pathname.match(/^\/slack\/events\/([^/]+)$/);
+    if (request.method === 'POST' && slackMatch) {
+      return handleSlackEvent(request, env, ctx, slackMatch[1]);
     }
 
     // ヘルスチェック

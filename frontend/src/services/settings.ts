@@ -8,12 +8,19 @@ export interface UserSettings {
   slackWebhookUrl: string | null;
   notionApiKey: string | null;
   notionDatabaseId: string | null;
+  slackBotToken: string | null;
+  slackSigningSecret: string | null;
+  slackInboundToken: string | null;
+  slackAllowedUserIds: string | null;
 }
 
 interface UpdateSettingsRequest {
   slackWebhookUrl?: string | null;
   notionApiKey?: string | null;
   notionDatabaseId?: string | null;
+  slackBotToken?: string | null;
+  slackSigningSecret?: string | null;
+  slackAllowedUserIds?: string | null;
 }
 
 interface UpdateSettingsResponse {
