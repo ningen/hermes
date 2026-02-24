@@ -8,6 +8,7 @@ import SettingsForm from './components/settings/SettingsForm';
 import WorkflowsPage from './pages/WorkflowsPage';
 import WorkflowFormPage from './pages/WorkflowFormPage';
 import OnboardingPage from './pages/OnboardingPage';
+import LogsPage from './pages/LogsPage';
 
 function App() {
   return (
@@ -61,6 +62,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <OnboardingPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/logs"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <LogsPage />
               </Layout>
             </ProtectedRoute>
           }

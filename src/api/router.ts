@@ -16,6 +16,7 @@ import {
   handleUpdateWorkflow,
   handleDeleteWorkflow,
 } from './workflows.js';
+import { handleListLogs } from './logs.js';
 
 /**
  * API リクエストをルーティングする
@@ -62,6 +63,10 @@ export async function routeAPI(request: Request, env: Env): Promise<Response> {
     // email route
     else if (path === '/api/email-route' && method === 'GET') {
       response = await handleGetEmailRoute(request, env);
+    }
+    // ログ一覧
+    else if (path === '/api/logs' && method === 'GET') {
+      response = await handleListLogs(request, env);
     }
     // ツール一覧（認証不要）
     else if (path === '/api/tools' && method === 'GET') {
