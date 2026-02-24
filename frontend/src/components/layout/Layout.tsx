@@ -38,6 +38,9 @@ export default function Layout({ children }: LayoutProps) {
                 <NavLink to="/settings" className={navLinkClass}>
                   設定
                 </NavLink>
+                <NavLink to="/onboarding" className={navLinkClass}>
+                  使い方
+                </NavLink>
               </div>
             </div>
             <div className="flex items-center space-x-4">
