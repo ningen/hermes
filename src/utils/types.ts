@@ -59,14 +59,25 @@ export type MailLogStatus = 'processed' | 'filtered' | 'error';
 export interface WorkflowContext {
   workflowId: string;
   workflowName: string;
-  /** ユーザーが定義した「何をしてほしいか」の指示 */
+  /** ユーザーが定義した「何をしてほしいか」の指示（llm モードで使用） */
   prompt: string;
+  /** 実行モード: 'llm' = LLM 推論 / 'direct' = ユーザー定義アクション */
+  mode: 'llm' | 'direct';
   triggeredAt: number;
   /** 事前実行されたツールの出力（エージェントのコンテキストに注入される） */
   toolResults: Array<{
     toolId: string;
     toolName: string;
     content: string;
+  }>;
+  /**
+   * ユーザー定義アクション（direct モード専用）
+   * paramsTemplate の文字列値に含まれる {{tool_id}} はツール出力で置換される
+   */
+  directActions?: Array<{
+    actionType: string;
+    paramsTemplate: Record<string, string>;
+    orderIndex: number;
   }>;
 }
 

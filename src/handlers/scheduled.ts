@@ -8,6 +8,7 @@ import type { Env, WorkflowContext } from '../utils/types.js';
 import {
   getAllActiveWorkflows,
   getWorkflowTools,
+  getWorkflowActions,
   updateWorkflowLastRun,
   type Workflow,
 } from '../db/workflows.js';
@@ -100,12 +101,23 @@ async function executeWorkflow(
     }
   }
 
+  // direct モードのワークフローはユーザー定義アクションを取得する
+  const directActions = workflow.mode === 'direct'
+    ? await getWorkflowActions(env.DB, workflow.id)
+    : [];
+
   const context: WorkflowContext = {
     workflowId: workflow.id,
     workflowName: workflow.name,
     prompt: workflow.prompt,
+    mode: workflow.mode,
     triggeredAt: now,
     toolResults,
+    directActions: directActions.map(a => ({
+      actionType: a.actionType,
+      paramsTemplate: a.paramsTemplate,
+      orderIndex: a.orderIndex,
+    })),
   };
 
   await runAgent({ type: 'workflow', data: context }, env, userSettings);
