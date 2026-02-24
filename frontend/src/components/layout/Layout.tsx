@@ -35,6 +35,9 @@ export default function Layout({ children }: LayoutProps) {
                 <NavLink to="/workflows" className={navLinkClass}>
                   ワークフロー
                 </NavLink>
+                <NavLink to="/logs" className={navLinkClass}>
+                  ログ
+                </NavLink>
                 <NavLink to="/settings" className={navLinkClass}>
                   設定
                 </NavLink>
