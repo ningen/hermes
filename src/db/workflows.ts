@@ -9,9 +9,26 @@ export interface Workflow {
   /** "hourly" | "daily:09" | "weekly:1:09" (時刻はUTC、曜日: 1=月 〜 7=日) */
   schedule: string;
   prompt: string;
+  /** 'llm': LLM がアクションを推論 / 'direct': ユーザー定義アクションをそのまま実行 */
+  mode: 'llm' | 'direct';
   isActive: boolean;
   lastRunAt: number | null;
   createdAt: number;
+}
+
+/**
+ * ユーザー定義アクション設定（direct モード用）
+ *
+ * params_template の文字列値には {{tool_id}} 形式のプレースホルダーを使用できる。
+ * 実行時にそのツールの出力内容に置換される。
+ */
+export interface WorkflowActionConfig {
+  id: string;
+  workflowId: string;
+  actionType: string;
+  /** アクション固有パラメータ。値の文字列に {{tool_id}} テンプレートを含められる */
+  paramsTemplate: Record<string, string>;
+  orderIndex: number;
 }
 
 export interface WorkflowToolConfig {
@@ -25,6 +42,7 @@ export interface WorkflowToolConfig {
 
 export interface WorkflowWithTools extends Workflow {
   tools: WorkflowToolConfig[];
+  actions: WorkflowActionConfig[];
 }
 
 // ---------------------------------------------------------------------------
@@ -38,17 +56,19 @@ export async function createWorkflow(
     name: string;
     schedule: string;
     prompt: string;
+    mode?: 'llm' | 'direct';
   }
 ): Promise<Workflow> {
   const id = crypto.randomUUID();
   const now = Math.floor(Date.now() / 1000);
+  const mode = data.mode ?? 'llm';
 
   await db
     .prepare(
-      `INSERT INTO workflows (id, user_id, name, schedule, prompt, is_active, last_run_at, created_at)
-       VALUES (?, ?, ?, ?, ?, 1, NULL, ?)`
+      `INSERT INTO workflows (id, user_id, name, schedule, prompt, mode, is_active, last_run_at, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, 1, NULL, ?)`
     )
-    .bind(id, data.userId, data.name, data.schedule, data.prompt, now)
+    .bind(id, data.userId, data.name, data.schedule, data.prompt, mode, now)
     .run();
 
   return {
@@ -57,6 +77,7 @@ export async function createWorkflow(
     name: data.name,
     schedule: data.schedule,
     prompt: data.prompt,
+    mode,
     isActive: true,
     lastRunAt: null,
     createdAt: now,
@@ -76,6 +97,7 @@ export async function getWorkflowsByUserId(
       name: string;
       schedule: string;
       prompt: string;
+      mode: string | null;
       is_active: number;
       last_run_at: number | null;
       created_at: number;
@@ -97,6 +119,7 @@ export async function getWorkflowById(
       name: string;
       schedule: string;
       prompt: string;
+      mode: string | null;
       is_active: number;
       last_run_at: number | null;
       created_at: number;
@@ -112,6 +135,7 @@ export async function updateWorkflow(
     name?: string;
     schedule?: string;
     prompt?: string;
+    mode?: 'llm' | 'direct';
     isActive?: boolean;
   }
 ): Promise<void> {
@@ -121,6 +145,7 @@ export async function updateWorkflow(
   if (data.name !== undefined) { fields.push('name = ?'); values.push(data.name); }
   if (data.schedule !== undefined) { fields.push('schedule = ?'); values.push(data.schedule); }
   if (data.prompt !== undefined) { fields.push('prompt = ?'); values.push(data.prompt); }
+  if (data.mode !== undefined) { fields.push('mode = ?'); values.push(data.mode); }
   if (data.isActive !== undefined) { fields.push('is_active = ?'); values.push(data.isActive ? 1 : 0); }
 
   if (fields.length === 0) return;
@@ -157,6 +182,7 @@ export async function getAllActiveWorkflows(db: D1Database): Promise<Workflow[]>
       name: string;
       schedule: string;
       prompt: string;
+      mode: string | null;
       is_active: number;
       last_run_at: number | null;
       created_at: number;
@@ -216,6 +242,55 @@ export async function replaceWorkflowTools(
 }
 
 // ---------------------------------------------------------------------------
+// WorkflowActionConfig CRUD (direct モード用)
+// ---------------------------------------------------------------------------
+
+export async function getWorkflowActions(
+  db: D1Database,
+  workflowId: string
+): Promise<WorkflowActionConfig[]> {
+  const rows = await db
+    .prepare(
+      `SELECT * FROM workflow_actions WHERE workflow_id = ? ORDER BY order_index ASC`
+    )
+    .bind(workflowId)
+    .all<{
+      id: string;
+      workflow_id: string;
+      action_type: string;
+      params_template: string;
+      order_index: number;
+    }>();
+
+  return (rows.results ?? []).map(r => ({
+    id: r.id,
+    workflowId: r.workflow_id,
+    actionType: r.action_type,
+    paramsTemplate: JSON.parse(r.params_template) as Record<string, string>,
+    orderIndex: r.order_index,
+  }));
+}
+
+export async function replaceWorkflowActions(
+  db: D1Database,
+  workflowId: string,
+  actions: Array<{ actionType: string; paramsTemplate: Record<string, string>; orderIndex: number }>
+): Promise<void> {
+  await db.prepare(`DELETE FROM workflow_actions WHERE workflow_id = ?`).bind(workflowId).run();
+
+  for (const action of actions) {
+    const id = crypto.randomUUID();
+    await db
+      .prepare(
+        `INSERT INTO workflow_actions (id, workflow_id, action_type, params_template, order_index)
+         VALUES (?, ?, ?, ?, ?)`
+      )
+      .bind(id, workflowId, action.actionType, JSON.stringify(action.paramsTemplate), action.orderIndex)
+      .run();
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
@@ -225,6 +300,7 @@ function rowToWorkflow(row: {
   name: string;
   schedule: string;
   prompt: string;
+  mode?: string | null;
   is_active: number;
   last_run_at: number | null;
   created_at: number;
@@ -235,6 +311,7 @@ function rowToWorkflow(row: {
     name: row.name,
     schedule: row.schedule,
     prompt: row.prompt,
+    mode: row.mode === 'direct' ? 'direct' : 'llm',
     isActive: row.is_active === 1,
     lastRunAt: row.last_run_at,
     createdAt: row.created_at,

@@ -18,6 +18,8 @@ import {
   deleteWorkflow,
   getWorkflowTools,
   replaceWorkflowTools,
+  getWorkflowActions,
+  replaceWorkflowActions,
 } from '../db/workflows.js';
 import { listTools } from '../tools/registry.js';
 
@@ -62,29 +64,46 @@ export async function handleCreateWorkflow(request: Request, env: Env): Promise<
         name?: string;
         schedule?: string;
         prompt?: string;
+        mode?: string;
         tools?: Array<{ toolId: string; config: Record<string, string>; orderIndex: number }>;
+        actions?: Array<{ actionType: string; paramsTemplate: Record<string, string>; orderIndex: number }>;
       };
 
       if (!body.name?.trim()) return json({ error: 'name is required' }, 400);
       if (!body.schedule?.trim()) return json({ error: 'schedule is required' }, 400);
-      if (!body.prompt?.trim()) return json({ error: 'prompt is required' }, 400);
       if (!isValidSchedule(body.schedule)) {
         return json({ error: 'Invalid schedule format. Use "hourly", "daily:HH", or "weekly:D:HH"' }, 400);
+      }
+
+      const mode = body.mode === 'direct' ? 'direct' : 'llm';
+
+      if (mode === 'llm' && !body.prompt?.trim()) {
+        return json({ error: 'prompt is required for llm mode' }, 400);
+      }
+      if (mode === 'direct' && (!body.actions || body.actions.length === 0)) {
+        return json({ error: 'actions is required for direct mode' }, 400);
       }
 
       const workflow = await createWorkflow(env.DB, {
         userId,
         name: body.name.trim(),
         schedule: body.schedule.trim(),
-        prompt: body.prompt.trim(),
+        prompt: body.prompt?.trim() ?? '',
+        mode,
       });
 
       if (body.tools?.length) {
         await replaceWorkflowTools(env.DB, workflow.id, body.tools);
       }
+      if (mode === 'direct' && body.actions?.length) {
+        await replaceWorkflowActions(env.DB, workflow.id, body.actions);
+      }
 
-      const tools = await getWorkflowTools(env.DB, workflow.id);
-      return json({ ...workflow, tools }, 201);
+      const [tools, actions] = await Promise.all([
+        getWorkflowTools(env.DB, workflow.id),
+        getWorkflowActions(env.DB, workflow.id),
+      ]);
+      return json({ ...workflow, tools, actions }, 201);
     } catch (err) {
       console.error('[workflows/create] Error:', err);
       return json({ error: 'Internal server error' }, 500);
@@ -107,8 +126,11 @@ export async function handleGetWorkflow(
       if (!workflow) return json({ error: 'Not found' }, 404);
       if (workflow.userId !== userId) return json({ error: 'Forbidden' }, 403);
 
-      const tools = await getWorkflowTools(env.DB, id);
-      return json({ ...workflow, tools });
+      const [tools, actions] = await Promise.all([
+        getWorkflowTools(env.DB, id),
+        getWorkflowActions(env.DB, id),
+      ]);
+      return json({ ...workflow, tools, actions });
     } catch (err) {
       console.error('[workflows/get] Error:', err);
       return json({ error: 'Internal server error' }, 500);
@@ -135,28 +157,39 @@ export async function handleUpdateWorkflow(
         name?: string;
         schedule?: string;
         prompt?: string;
+        mode?: string;
         isActive?: boolean;
         tools?: Array<{ toolId: string; config: Record<string, string>; orderIndex: number }>;
+        actions?: Array<{ actionType: string; paramsTemplate: Record<string, string>; orderIndex: number }>;
       };
 
       if (body.schedule && !isValidSchedule(body.schedule)) {
         return json({ error: 'Invalid schedule format' }, 400);
       }
 
+      const mode = body.mode === 'direct' ? 'direct' : body.mode === 'llm' ? 'llm' : undefined;
+
       await updateWorkflow(env.DB, id, {
         name: body.name?.trim(),
         schedule: body.schedule?.trim(),
         prompt: body.prompt?.trim(),
+        mode,
         isActive: body.isActive,
       });
 
       if (body.tools !== undefined) {
         await replaceWorkflowTools(env.DB, id, body.tools);
       }
+      if (body.actions !== undefined) {
+        await replaceWorkflowActions(env.DB, id, body.actions);
+      }
 
       const updated = await getWorkflowById(env.DB, id);
-      const tools = await getWorkflowTools(env.DB, id);
-      return json({ ...updated, tools });
+      const [tools, actions] = await Promise.all([
+        getWorkflowTools(env.DB, id),
+        getWorkflowActions(env.DB, id),
+      ]);
+      return json({ ...updated, tools, actions });
     } catch (err) {
       console.error('[workflows/update] Error:', err);
       return json({ error: 'Internal server error' }, 500);

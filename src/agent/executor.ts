@@ -28,7 +28,10 @@ type UserSettings = {
 } | null | undefined;
 
 /**
- * 入力コンテキスト（メールまたはワークフロー）を Gemini エージェントで処理し、アクションを実行する。
+ * 入力コンテキスト（メールまたはワークフロー）を処理し、アクションを実行する。
+ *
+ * ワークフローが direct モードの場合は Gemini を呼ばず、
+ * ユーザー定義アクションをテンプレート展開してそのまま実行する。
  *
  * @param context  - 入力コンテキスト
  * @param env      - 環境変数バインディング
@@ -40,6 +43,11 @@ export async function runAgent(
   env: Env,
   userSettings?: UserSettings
 ): Promise<AgentResult> {
+  // direct モードのワークフローは LLM をバイパスする
+  if (context.type === 'workflow' && context.data.mode === 'direct') {
+    return runDirectWorkflow(context.data, env, userSettings);
+  }
+
   // 1. コンテキスト種別に応じたプロンプトを生成
   const prompt = context.type === 'email'
     ? buildAgentPrompt(context.data)
@@ -58,6 +66,54 @@ export async function runAgent(
     understanding: geminiResponse.understanding,
     actionResults,
   };
+}
+
+/**
+ * direct モードのワークフローを実行する。
+ * ユーザーが定義したアクション設定を展開し、LLM なしで直接実行する。
+ */
+async function runDirectWorkflow(
+  wf: import('../utils/types.js').WorkflowContext,
+  env: Env,
+  userSettings?: UserSettings
+): Promise<AgentResult> {
+  const directActions = wf.directActions ?? [];
+  console.log(`[executor] direct mode: ${directActions.length} action(s) configured`);
+
+  // アクション設定をテンプレート展開して Action 型に変換する
+  const actions: Action[] = directActions
+    .sort((a, b) => a.orderIndex - b.orderIndex)
+    .map(ac => {
+      const expandedParams = expandTemplates(ac.paramsTemplate, wf.toolResults);
+      return { type: ac.actionType, params: expandedParams } as Action;
+    });
+
+  const actionResults = await executeActions(actions, env, userSettings);
+
+  return {
+    understanding: `[direct] ワークフロー "${wf.workflowName}" を実行しました（LLM 不使用）`,
+    actionResults,
+  };
+}
+
+/**
+ * paramsTemplate 内の文字列値に含まれる {{tool_id}} プレースホルダーを
+ * 対応するツール出力で置換する。
+ *
+ * 例: "Today's HN:\n{{hacker_news}}" → "Today's HN:\n<hacker_news の出力>"
+ */
+function expandTemplates(
+  paramsTemplate: Record<string, string>,
+  toolResults: Array<{ toolId: string; toolName: string; content: string }>
+): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const [key, value] of Object.entries(paramsTemplate)) {
+    result[key] = value.replace(/\{\{(\w+)\}\}/g, (_match, toolId: string) => {
+      const found = toolResults.find(r => r.toolId === toolId);
+      return found ? found.content : `[${toolId}: データなし]`;
+    });
+  }
+  return result;
 }
 
 /**
