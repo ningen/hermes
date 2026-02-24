@@ -105,6 +105,23 @@ export async function handleSlackEvent(
   // リクエストボディを先に読み取る（署名検証に必要）
   const rawBody = await request.text();
 
+  // ペイロードを先にパース
+  let payload: SlackPayload;
+  try {
+    payload = JSON.parse(rawBody) as SlackPayload;
+  } catch {
+    return new Response('Bad Request', { status: 400 });
+  }
+
+  // URL 検証チャレンジ（Slack App の Event URL 登録時のみ）
+  // 署名検証・ユーザー設定の前に処理する（初回設定時はまだ signing secret が未設定の場合があるため）
+  if (payload.type === 'url_verification') {
+    return new Response(JSON.stringify({ challenge: payload.challenge }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   // トークンでユーザー設定を引く
   const userSettings = await getUserSettingsBySlackToken(env.DB, token, env.ENCRYPTION_KEY);
   if (!userSettings || !userSettings.slackSigningSecret) {
@@ -125,22 +142,6 @@ export async function handleSlackEvent(
 
   if (!isValid) {
     return new Response('Unauthorized', { status: 401 });
-  }
-
-  // ペイロードをパース
-  let payload: SlackPayload;
-  try {
-    payload = JSON.parse(rawBody) as SlackPayload;
-  } catch {
-    return new Response('Bad Request', { status: 400 });
-  }
-
-  // URL 検証チャレンジ（Slack App の Event URL 登録時のみ）
-  if (payload.type === 'url_verification') {
-    return new Response(JSON.stringify({ challenge: payload.challenge }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
   }
 
   // event_callback 以外は無視
