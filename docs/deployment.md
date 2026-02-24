@@ -75,13 +75,29 @@ wrangler d1 migrations apply hermes-db --local
 
 ```bash
 wrangler secret put MAILGUN_API_KEY
-# Mailgun ダッシュボード → Settings → API Keys → Mailgun API Key または HTTP Webhook Signing Key
+# Mailgun ダッシュボード → Settings → API Keys → HTTP Webhook Signing Key
+# ※ "Mailgun API Key"（key-xxx）ではなく Webhook Signing Key を使用すること
 
 wrangler secret put GEMINI_API_KEY
 # Google AI Studio → Get API Key
 
-wrangler secret put SLACK_WEBHOOK_URL
-# Slack アプリ設定 → Incoming Webhooks → Webhook URL
+wrangler secret put JWT_SECRET
+# 32文字以上のランダム文字列
+# 例: node -e "console.log(crypto.randomUUID() + crypto.randomUUID())"
+
+wrangler secret put ENCRYPTION_KEY
+# 認証情報暗号化キー（同様にランダム文字列を生成）
+# 例: node -e "console.log(crypto.randomUUID() + crypto.randomUUID())"
+```
+
+メール返信機能（`reply_email` アクション）を使用する場合は、追加で設定してください：
+
+```bash
+wrangler secret put MAILGUN_DOMAIN
+# 例: mg.yourdomain.com
+
+wrangler secret put FROM_ADDRESS
+# 例: hermes@mg.yourdomain.com
 ```
 
 設定確認:
