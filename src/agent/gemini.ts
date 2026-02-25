@@ -32,6 +32,47 @@ interface GeminiApiResponse {
 }
 
 /**
+ * Gemini の responseSchema: GeminiResponse の構造を強制する。
+ * responseMimeType: 'application/json' と組み合わせて使用する。
+ */
+const GEMINI_RESPONSE_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    understanding: {
+      type: 'STRING',
+      description: 'メール/メッセージ内容の要約（日本語）',
+    },
+    actions: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          type: {
+            type: 'STRING',
+            enum: ['notify_slack', 'reply_email', 'create_schedule', 'reply_slack', 'ignore'],
+          },
+          params: {
+            type: 'OBJECT',
+            properties: {
+              message: { type: 'STRING' },
+              to: { type: 'STRING' },
+              subject: { type: 'STRING' },
+              body: { type: 'STRING' },
+              title: { type: 'STRING' },
+              description: { type: 'STRING' },
+              startTime: { type: 'STRING' },
+              endTime: { type: 'STRING' },
+            },
+          },
+        },
+        required: ['type', 'params'],
+      },
+    },
+  },
+  required: ['understanding', 'actions'],
+} as const;
+
+/**
  * Gemini にプロンプトを送信してレスポンスを受け取る。
  * 最大 MAX_RETRIES 回まで指数バックオフでリトライする。
  *
@@ -78,8 +119,9 @@ async function fetchGemini(prompt: string, apiKey: string): Promise<GeminiRespon
     ],
     generationConfig: {
       responseMimeType: 'application/json',
+      responseSchema: GEMINI_RESPONSE_SCHEMA,
       temperature: 0.1,
-      maxOutputTokens: 2048,
+      maxOutputTokens: 8192,
     },
   };
 
