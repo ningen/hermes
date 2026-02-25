@@ -54,7 +54,7 @@ function LogCard({ log }: { log: MailLog }) {
             {log.fromAddr} → {log.toAddr}
           </p>
         </div>
-        <span className="text-xs text-gray-400 shrink-0">{formatDate(log.receivedAt)}</span>
+        <span className="hidden sm:inline text-xs text-gray-400 shrink-0">{formatDate(log.receivedAt)}</span>
         <span className="text-gray-400 shrink-0">{expanded ? '▲' : '▼'}</span>
       </button>
 
@@ -62,7 +62,7 @@ function LogCard({ log }: { log: MailLog }) {
       {expanded && (
         <div className="px-4 pb-4 border-t border-gray-100 bg-gray-50 space-y-3">
           {/* メタ情報 */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-3 text-xs text-gray-600">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 pt-3 text-xs text-gray-600">
             <div>
               <span className="font-medium text-gray-700">From: </span>
               {log.fromAddr}

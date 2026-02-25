@@ -81,9 +81,9 @@ export default function WorkflowsPage() {
         <ul className="divide-y divide-gray-200">
           {workflows.map((wf) => (
             <li key={wf.id} className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 min-w-0 pr-4">
-                  <div className="flex items-center gap-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 flex-wrap">
                     <span className={`inline-flex h-2 w-2 rounded-full flex-shrink-0 ${wf.isActive ? 'bg-green-400' : 'bg-gray-300'}`} />
                     <p className="text-sm font-medium text-gray-900 truncate">{wf.name}</p>
                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
@@ -97,7 +97,7 @@ export default function WorkflowsPage() {
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0 pl-5 sm:pl-0">
                   <button
                     onClick={() => handleToggleActive(wf)}
                     className={`text-xs px-2 py-1 rounded ${

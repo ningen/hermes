@@ -85,12 +85,12 @@ export default function OnboardingPage() {
           情報収集から通知まで、繰り返しの作業をワークフローとして定義するだけで自動化できます。
         </p>
         {emailRoute && (
-          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 rounded-lg">
+          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 rounded-lg max-w-full flex-wrap justify-center">
             <svg className="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            <span className="text-sm text-indigo-700">
+            <span className="text-sm text-indigo-700 break-all">
               あなたの専用メールアドレス:{' '}
               <span className="font-medium">{emailRoute.emailAddress}</span>
             </span>
