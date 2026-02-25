@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import LoginForm from './components/auth/LoginForm';
@@ -9,6 +9,7 @@ import WorkflowsPage from './pages/WorkflowsPage';
 import WorkflowFormPage from './pages/WorkflowFormPage';
 import OnboardingPage from './pages/OnboardingPage';
 import LogsPage from './pages/LogsPage';
+import LandingPage from './pages/LandingPage';
 
 function App() {
   return (
@@ -76,7 +77,7 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/" element={<Navigate to="/workflows" replace />} />
+        <Route path="/" element={<LandingPage />} />
       </Routes>
     </AuthProvider>
   );
