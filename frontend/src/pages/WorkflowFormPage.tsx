@@ -375,7 +375,7 @@ export default function WorkflowFormPage() {
                       </span>
                       <div>
                         <span className="text-sm font-medium text-gray-800">{toolDef.name}</span>
-                        <span className="ml-2 text-xs text-gray-400">{toolDef.description}</span>
+                        <span className="hidden sm:inline ml-2 text-xs text-gray-400">{toolDef.description}</span>
                       </div>
                     </div>
                     <button
@@ -588,7 +588,7 @@ export default function WorkflowFormPage() {
                           </span>
                           <div>
                             <span className="text-sm font-medium text-gray-800">{schema.name}</span>
-                            <span className="ml-2 text-xs text-gray-400">{schema.description}</span>
+                            <span className="hidden sm:inline ml-2 text-xs text-gray-400">{schema.description}</span>
                           </div>
                         </div>
                         <button
@@ -662,7 +662,7 @@ export default function WorkflowFormPage() {
         </Step>
 
         {/* ── Submit ───────────────────────────────────────────────── */}
-        <div className="flex items-center gap-3 pt-2 pl-12">
+        <div className="flex items-center gap-3 pt-2 sm:pl-12">
           <button
             type="submit"
             disabled={saving}
