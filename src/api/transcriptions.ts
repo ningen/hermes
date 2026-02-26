@@ -29,25 +29,16 @@ const json = (data: unknown, status = 200) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
-/** Deepgram Nova-3 のレスポンス型 */
-interface NovaWord {
+/** Whisper large-v3-turbo のレスポンス型 */
+interface WhisperWord {
   word: string;
   start: number;
   end: number;
-  confidence: number;
-  speaker?: number;
 }
 
-interface NovaResult {
-  results?: {
-    channels?: Array<{
-      alternatives?: Array<{
-        transcript: string;
-        confidence: number;
-        words: NovaWord[];
-      }>;
-    }>;
-  };
+interface WhisperResult {
+  text: string;
+  words?: WhisperWord[];
 }
 
 /** スケジュール候補 */
@@ -62,45 +53,17 @@ export interface ScheduleCandidate {
 const ALLOWED_MIME_PREFIXES = ['audio/', 'video/'];
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 
-/** Nova-3 diarization の speaker 番号に基づいてワードをセグメントに分割する */
-function segmentBySpeaker(words: NovaWord[]): TranscriptionSegment[] {
+/** ワードリストをひとつのセグメントにまとめる（whisper はダイアライゼーション非対応） */
+function segmentFromWords(words: WhisperWord[]): TranscriptionSegment[] {
   if (!words.length) return [];
-
-  const speakerLabels = ['話者A', '話者B', '話者C', '話者D', '話者E', '話者F'];
-  const speakerMap = new Map<number, string>();
-
-  const segments: TranscriptionSegment[] = [];
-  let currentSpeakerNum = words[0].speaker ?? 0;
-  speakerMap.set(currentSpeakerNum, speakerLabels[0]);
-
-  let current: TranscriptionSegment = {
-    speaker: speakerLabels[0],
-    start: words[0].start,
-    end: words[0].end,
-    text: words[0].word,
-  };
-
-  for (let i = 1; i < words.length; i++) {
-    const speakerNum = words[i].speaker ?? 0;
-    if (speakerNum !== currentSpeakerNum) {
-      segments.push({ ...current });
-      currentSpeakerNum = speakerNum;
-      if (!speakerMap.has(speakerNum)) {
-        speakerMap.set(speakerNum, speakerLabels[speakerMap.size % speakerLabels.length]);
-      }
-      current = {
-        speaker: speakerMap.get(speakerNum)!,
-        start: words[i].start,
-        end: words[i].end,
-        text: words[i].word,
-      };
-    } else {
-      current.end = words[i].end;
-      current.text += ' ' + words[i].word;
-    }
-  }
-  segments.push(current);
-  return segments;
+  return [
+    {
+      speaker: '話者A',
+      start: words[0].start,
+      end: words[words.length - 1].end,
+      text: words.map((w) => w.word).join(' '),
+    },
+  ];
 }
 
 /** UUID v4 を生成する */
@@ -161,24 +124,20 @@ export async function handleUploadTranscription(request: Request, env: Env): Pro
       fileKey,
     });
 
-    // Deepgram Nova-3 で文字起こし（将来 whisper-large-v3-turbo への切り替えを想定）
+    // whisper-large-v3-turbo で文字起こし
     try {
-      const stream = new Response(arrayBuffer).body;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rawResponse = (await (env.AI as any).run(
-        '@cf/deepgram/nova-3',
-        { audio: { body: stream, contentType: mimeType }, diarize: true, detect_language: true },
-        { returnRawResponse: true }
-      )) as Response;
+      const whisperResult = (await (env.AI as any).run(
+        '@cf/openai/whisper-large-v3-turbo',
+        { audio: [...new Uint8Array(arrayBuffer)] }
+      )) as WhisperResult;
 
-      const novaResult = (await rawResponse.json()) as NovaResult;
-      const alternative = novaResult.results?.channels?.[0]?.alternatives?.[0];
-      const transcript = alternative?.transcript ?? '';
-      const words = alternative?.words ?? [];
+      const transcript = whisperResult.text ?? '';
+      const words = whisperResult.words ?? [];
 
       const segments =
         words.length > 0
-          ? segmentBySpeaker(words)
+          ? segmentFromWords(words)
           : transcript
             ? [{ speaker: '話者A', start: 0, end: 0, text: transcript }]
             : [];
@@ -193,7 +152,7 @@ export async function handleUploadTranscription(request: Request, env: Env): Pro
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error('[transcriptions/upload] Nova-3 error:', msg);
+      console.error('[transcriptions/upload] whisper-large-v3-turbo error:', msg);
       await updateTranscriptionError(env.DB, id, msg);
     }
 
