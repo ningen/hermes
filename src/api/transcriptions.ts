@@ -129,7 +129,7 @@ export async function handleUploadTranscription(request: Request, env: Env): Pro
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const whisperResult = (await (env.AI as any).run(
         '@cf/openai/whisper-large-v3-turbo',
-        { audio: [...new Uint8Array(arrayBuffer)] }
+        { audio: new Uint8Array(arrayBuffer) }
       )) as WhisperResult;
 
       const transcript = whisperResult.text ?? '';
