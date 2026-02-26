@@ -30,6 +30,10 @@ export interface UserSettings {
   slackInboundToken: string | null;
   /** Slack インバウンド: 許可する Slack User ID（カンマ区切り） */
   slackAllowedUserIds: string | null;
+  /** Google カレンダー: OAuth2 リフレッシュトークン（暗号化済み） */
+  googleRefreshToken: string | null;
+  /** Google カレンダー: 登録先カレンダー ID（デフォルト: "primary"） */
+  googleCalendarId: string | null;
   createdAt: number;
   updatedAt: number;
 }

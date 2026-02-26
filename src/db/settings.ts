@@ -27,6 +27,8 @@ export async function saveUserSettings(
     slackSigningSecret?: string | null;
     slackInboundToken?: string | null;
     slackAllowedUserIds?: string | null;
+    googleRefreshToken?: string | null;
+    googleCalendarId?: string | null;
   },
   encryptionKey: string
 ): Promise<UserSettings> {
@@ -48,12 +50,20 @@ export async function saveUserSettings(
   const encryptedSigningSecret = settings.slackSigningSecret
     ? await encrypt(settings.slackSigningSecret, encryptionKey)
     : null;
+  const encryptedGoogleRefreshToken = settings.googleRefreshToken
+    ? await encrypt(settings.googleRefreshToken, encryptionKey)
+    : null;
 
   // 既存設定を確認
   const existing = await db
-    .prepare(`SELECT id, slack_inbound_token FROM user_settings WHERE user_id = ?`)
+    .prepare(`SELECT id, slack_inbound_token, google_refresh_token, google_calendar_id FROM user_settings WHERE user_id = ?`)
     .bind(userId)
-    .first<{ id: string; slack_inbound_token: string | null }>();
+    .first<{
+      id: string;
+      slack_inbound_token: string | null;
+      google_refresh_token: string | null;
+      google_calendar_id: string | null;
+    }>();
 
   // inbound_token は新規作成時に自動生成し、既存の場合は引数がなければ保持
   const inboundToken =
@@ -65,6 +75,18 @@ export async function saveUserSettings(
   const resolvedInboundToken =
     inboundToken ?? (settings.slackSigningSecret ? crypto.randomUUID() : null);
 
+  // google_refresh_token は明示的に null が渡された場合のみクリア（undefined = 保持）
+  const resolvedGoogleRefreshToken =
+    settings.googleRefreshToken !== undefined
+      ? encryptedGoogleRefreshToken
+      : existing?.google_refresh_token ?? null;
+
+  // google_calendar_id は明示的に null が渡された場合のみクリア（undefined = 保持）
+  const resolvedGoogleCalendarId =
+    settings.googleCalendarId !== undefined
+      ? settings.googleCalendarId
+      : existing?.google_calendar_id ?? null;
+
   if (existing) {
     // 更新
     await db
@@ -73,6 +95,7 @@ export async function saveUserSettings(
          SET slack_webhook_url = ?, notion_api_key = ?, notion_database_id = ?,
              slack_bot_token = ?, slack_signing_secret = ?,
              slack_inbound_token = ?, slack_allowed_user_ids = ?,
+             google_refresh_token = ?, google_calendar_id = ?,
              updated_at = ?
          WHERE user_id = ?`
       )
@@ -80,9 +103,15 @@ export async function saveUserSettings(
         encryptedSlack, encryptedNotion, encryptedDatabase,
         encryptedBotToken, encryptedSigningSecret,
         resolvedInboundToken, settings.slackAllowedUserIds ?? null,
+        resolvedGoogleRefreshToken, resolvedGoogleCalendarId,
         now, userId
       )
       .run();
+
+    // 復号化して返す（google_refresh_token は接続有無の boolean に変換）
+    const decryptedRefreshToken = resolvedGoogleRefreshToken
+      ? await decrypt(resolvedGoogleRefreshToken, encryptionKey)
+      : null;
 
     return {
       id: existing.id,
@@ -94,6 +123,8 @@ export async function saveUserSettings(
       slackSigningSecret: settings.slackSigningSecret ?? null,
       slackInboundToken: resolvedInboundToken,
       slackAllowedUserIds: settings.slackAllowedUserIds ?? null,
+      googleRefreshToken: decryptedRefreshToken,
+      googleCalendarId: resolvedGoogleCalendarId,
       createdAt: 0,
       updatedAt: now,
     };
@@ -108,15 +139,17 @@ export async function saveUserSettings(
            slack_webhook_url, notion_api_key, notion_database_id,
            slack_bot_token, slack_signing_secret,
            slack_inbound_token, slack_allowed_user_ids,
+           google_refresh_token, google_calendar_id,
            created_at, updated_at
          )
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .bind(
         id, userId,
         encryptedSlack, encryptedNotion, encryptedDatabase,
         encryptedBotToken, encryptedSigningSecret,
         resolvedInboundToken, settings.slackAllowedUserIds ?? null,
+        resolvedGoogleRefreshToken, resolvedGoogleCalendarId,
         now, now
       )
       .run();
@@ -131,6 +164,8 @@ export async function saveUserSettings(
       slackSigningSecret: settings.slackSigningSecret ?? null,
       slackInboundToken: resolvedInboundToken,
       slackAllowedUserIds: settings.slackAllowedUserIds ?? null,
+      googleRefreshToken: settings.googleRefreshToken ?? null,
+      googleCalendarId: resolvedGoogleCalendarId,
       createdAt: now,
       updatedAt: now,
     };
@@ -163,6 +198,8 @@ export async function getUserSettings(
       slack_signing_secret: string | null;
       slack_inbound_token: string | null;
       slack_allowed_user_ids: string | null;
+      google_refresh_token: string | null;
+      google_calendar_id: string | null;
       created_at: number;
       updated_at: number;
     }>();
@@ -187,6 +224,9 @@ export async function getUserSettings(
   const slackSigningSecret = result.slack_signing_secret
     ? await decrypt(result.slack_signing_secret, encryptionKey)
     : null;
+  const googleRefreshToken = result.google_refresh_token
+    ? await decrypt(result.google_refresh_token, encryptionKey)
+    : null;
 
   return {
     id: result.id,
@@ -198,6 +238,8 @@ export async function getUserSettings(
     slackSigningSecret,
     slackInboundToken: result.slack_inbound_token,
     slackAllowedUserIds: result.slack_allowed_user_ids,
+    googleRefreshToken,
+    googleCalendarId: result.google_calendar_id,
     createdAt: result.created_at,
     updatedAt: result.updated_at,
   };

@@ -26,6 +26,8 @@ export async function handleGetSettings(request: Request, env: Env): Promise<Res
             slackSigningSecret: null,
             slackInboundToken: null,
             slackAllowedUserIds: null,
+            googleConnected: false,
+            googleCalendarId: null,
           }),
           { status: 200, headers: { 'Content-Type': 'application/json' } }
         );
@@ -40,6 +42,8 @@ export async function handleGetSettings(request: Request, env: Env): Promise<Res
           slackSigningSecret: settings.slackSigningSecret,
           slackInboundToken: settings.slackInboundToken,
           slackAllowedUserIds: settings.slackAllowedUserIds,
+          googleConnected: !!settings.googleRefreshToken,
+          googleCalendarId: settings.googleCalendarId,
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
       );
@@ -67,6 +71,7 @@ export async function handleUpdateSettings(request: Request, env: Env): Promise<
         slackBotToken?: string | null;
         slackSigningSecret?: string | null;
         slackAllowedUserIds?: string | null;
+        googleCalendarId?: string | null;
       };
 
       // 設定を保存
@@ -83,6 +88,8 @@ export async function handleUpdateSettings(request: Request, env: Env): Promise<
             slackSigningSecret: settings.slackSigningSecret,
             slackInboundToken: settings.slackInboundToken,
             slackAllowedUserIds: settings.slackAllowedUserIds,
+            googleConnected: !!settings.googleRefreshToken,
+            googleCalendarId: settings.googleCalendarId,
           },
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }

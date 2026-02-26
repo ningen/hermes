@@ -19,6 +19,8 @@ export interface Env {
   JWT_SECRET: string;                  // JWT 署名用シークレット
   ENCRYPTION_KEY: string;              // 認証情報暗号化キー
   ENVIRONMENT: string;
+  GOOGLE_CLIENT_ID: string;            // Google OAuth クライアント ID
+  GOOGLE_CLIENT_SECRET: string;        // Google OAuth クライアントシークレット
 }
 
 /**
