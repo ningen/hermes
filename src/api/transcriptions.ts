@@ -124,12 +124,20 @@ export async function handleUploadTranscription(request: Request, env: Env): Pro
       fileKey,
     });
 
-    // whisper-large-v3-turbo で文字起こし
+    // whisper-large-v3-turbo で文字起こし（audio は base64 文字列で渡す）
     try {
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      const CHUNK = 8192;
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+      }
+      const base64Audio = btoa(binary);
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const whisperResult = (await (env.AI as any).run(
         '@cf/openai/whisper-large-v3-turbo',
-        { audio: new Uint8Array(arrayBuffer) }
+        { audio: base64Audio }
       )) as WhisperResult;
 
       const transcript = whisperResult.text ?? '';
