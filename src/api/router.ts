@@ -6,6 +6,7 @@
 
 import type { Env } from '../utils/types.js';
 import { handleAuthRegister, handleAuthLogin, handleAuthMe, handleAuthLogout } from './auth.js';
+import { handleGoogleAuthUrl, handleGoogleAuthCallback, handleGoogleAuthDisconnect } from './google_auth.js';
 import { handleGetEmailRoute } from './emailRoute.js';
 import { handleGetSettings, handleUpdateSettings } from './settings.js';
 import {
@@ -61,6 +62,14 @@ export async function routeAPI(request: Request, env: Env): Promise<Response> {
       response = await handleAuthMe(request, env);
     } else if (path === '/api/auth/logout' && method === 'POST') {
       response = await handleAuthLogout(request, env);
+    }
+    // Google OAuth エンドポイント
+    else if (path === '/api/auth/google/url' && method === 'GET') {
+      response = await handleGoogleAuthUrl(request, env);
+    } else if (path === '/api/auth/google/callback' && method === 'GET') {
+      response = await handleGoogleAuthCallback(request, env);
+    } else if (path === '/api/auth/google' && method === 'DELETE') {
+      response = await handleGoogleAuthDisconnect(request, env);
     }
     // 設定エンドポイント
     else if (path === '/api/settings' && method === 'GET') {

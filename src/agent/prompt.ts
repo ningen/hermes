@@ -27,7 +27,7 @@ export function buildAgentPrompt(email: ParsedEmail): string {
 - reply_email: 送信者に返信する（Phase 2 機能）
   - params: { "to": "送信先アドレス", "subject": "件名", "body": "本文" }
 
-- create_schedule: スケジュール管理アプリへ登録する（Phase 2 機能）
+- create_schedule: Google カレンダーへ予定を登録する
   - params: { "title": "タイトル", "description": "説明（省略可）", "startTime": "ISO8601形式", "endTime": "ISO8601形式（省略可）" }
 
 - ignore: 対応不要（スパム・ニュースレター・定型通知等）
@@ -71,7 +71,7 @@ const ACTIONS_DEFINITION = `
 - reply_email: 送信者に返信する（Phase 2 機能）
   - params: { "to": "送信先アドレス", "subject": "件名", "body": "本文" }
 
-- create_schedule: スケジュール管理アプリへ登録する（Phase 2 機能）
+- create_schedule: Google カレンダーへ予定を登録する
   - params: { "title": "タイトル", "description": "説明（省略可）", "startTime": "ISO8601形式", "endTime": "ISO8601形式（省略可）" }
 
 - ignore: 対応不要

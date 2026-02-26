@@ -8,7 +8,7 @@ import type { Env, InputContext } from '../utils/types.js';
 import type { Action, ActionResult, GeminiResponse } from '../actions/types.js';
 import { notifySlack } from '../actions/notify_slack.js';
 import { replyEmail } from '../actions/reply_email.js';
-import { createSchedule } from '../actions/create_schedule.js';
+import { createGoogleCalendarEvent } from '../actions/google_calendar.js';
 import { replySlack } from '../actions/reply_slack.js';
 import { callGemini } from './gemini.js';
 import { buildAgentPrompt, buildWorkflowPrompt, buildSlackPrompt } from './prompt.js';
@@ -27,6 +27,8 @@ type UserSettings = {
   notionApiKey?: string | null;
   notionDatabaseId?: string | null;
   slackBotToken?: string | null;
+  googleRefreshToken?: string | null;
+  googleCalendarId?: string | null;
 } | null | undefined;
 
 /**
@@ -198,16 +200,22 @@ async function executeAction(
         );
 
       case 'create_schedule': {
-        const notionApiKey = userSettings?.notionApiKey;
-        const notionDatabaseId = userSettings?.notionDatabaseId;
-        if (!notionApiKey || !notionDatabaseId) {
+        const googleRefreshToken = userSettings?.googleRefreshToken;
+        const calendarId = userSettings?.googleCalendarId ?? 'primary';
+        if (!googleRefreshToken) {
           return {
             type: 'create_schedule',
             success: false,
-            error: 'Notion API key or database ID not configured',
+            error: 'Google Calendar not connected. Please connect your Google account in Settings.',
           };
         }
-        return await createSchedule(action, notionApiKey, notionDatabaseId);
+        return await createGoogleCalendarEvent(
+          action,
+          googleRefreshToken,
+          calendarId,
+          env.GOOGLE_CLIENT_ID,
+          env.GOOGLE_CLIENT_SECRET
+        );
       }
 
       case 'reply_slack': {
