@@ -10,6 +10,8 @@ import WorkflowFormPage from './pages/WorkflowFormPage';
 import OnboardingPage from './pages/OnboardingPage';
 import LogsPage from './pages/LogsPage';
 import LandingPage from './pages/LandingPage';
+import TranscriptionsPage from './pages/TranscriptionsPage';
+import TranscriptionDetailPage from './pages/TranscriptionDetailPage';
 
 function App() {
   return (
@@ -73,6 +75,26 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <LogsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/transcriptions"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <TranscriptionsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/transcriptions/:id"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <TranscriptionDetailPage />
               </Layout>
             </ProtectedRoute>
           }

@@ -45,6 +45,9 @@ export default function Layout({ children }: LayoutProps) {
                 <NavLink to="/workflows" className={navLinkClass}>
                   ワークフロー
                 </NavLink>
+                <NavLink to="/transcriptions" className={navLinkClass}>
+                  文字起こし
+                </NavLink>
                 <NavLink to="/logs" className={navLinkClass}>
                   ログ
                 </NavLink>
@@ -100,6 +103,9 @@ export default function Layout({ children }: LayoutProps) {
             <div className="divide-y divide-gray-100">
               <NavLink to="/workflows" className={mobileNavLinkClass} onClick={() => setMobileMenuOpen(false)}>
                 ワークフロー
+              </NavLink>
+              <NavLink to="/transcriptions" className={mobileNavLinkClass} onClick={() => setMobileMenuOpen(false)}>
+                文字起こし
               </NavLink>
               <NavLink to="/logs" className={mobileNavLinkClass} onClick={() => setMobileMenuOpen(false)}>
                 ログ
