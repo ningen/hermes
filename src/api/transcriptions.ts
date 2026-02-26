@@ -46,7 +46,7 @@ export interface ScheduleCandidate {
 
 /** 許可する MIME タイプ */
 const ALLOWED_MIME_PREFIXES = ['audio/', 'video/'];
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (Workers AI Whisper の JSON ペイロード制限対策)
 
 /**
  * ポーズ（無音区間）に基づいてワードをセグメントに分割する。
@@ -126,7 +126,7 @@ export async function handleUploadTranscription(request: Request, env: Env): Pro
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      return json({ error: 'ファイルサイズは 25MB 以下にしてください' }, 400);
+      return json({ error: 'ファイルサイズは 10MB 以下にしてください' }, 400);
     }
 
     const id = generateId();
@@ -149,7 +149,7 @@ export async function handleUploadTranscription(request: Request, env: Env): Pro
 
     // Workers AI Whisper で文字起こし
     try {
-      const audioBytes = new Uint8Array(arrayBuffer);
+      const audioBytes = [...new Uint8Array(arrayBuffer)];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const whisperResult = (await (env.AI as any).run('@cf/openai/whisper', {
         audio: audioBytes,
