@@ -29,11 +29,25 @@ const json = (data: unknown, status = 200) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
-/** Workers AI Whisper のレスポンス型 */
-interface WhisperResult {
-  text: string;
-  word_count?: number;
-  words?: Array<{ word: string; start: number; end: number }>;
+/** Deepgram Nova-3 のレスポンス型 */
+interface NovaWord {
+  word: string;
+  start: number;
+  end: number;
+  confidence: number;
+  speaker?: number;
+}
+
+interface NovaResult {
+  results?: {
+    channels?: Array<{
+      alternatives?: Array<{
+        transcript: string;
+        confidence: number;
+        words: NovaWord[];
+      }>;
+    }>;
+  };
 }
 
 /** スケジュール候補 */
@@ -46,36 +60,36 @@ export interface ScheduleCandidate {
 
 /** 許可する MIME タイプ */
 const ALLOWED_MIME_PREFIXES = ['audio/', 'video/'];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB (Workers AI Whisper の JSON ペイロード制限対策)
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
 
-/**
- * ポーズ（無音区間）に基づいてワードをセグメントに分割する。
- * 話者分離は Workers AI では利用不可のため、ポーズによる近似的な話者交代を実装する。
- */
-function segmentByPause(
-  words: Array<{ word: string; start: number; end: number }>,
-  pauseThreshold = 1.5
-): TranscriptionSegment[] {
+/** Nova-3 diarization の speaker 番号に基づいてワードをセグメントに分割する */
+function segmentBySpeaker(words: NovaWord[]): TranscriptionSegment[] {
   if (!words.length) return [];
 
-  const speakers = ['話者A', '話者B', '話者C', '話者D'];
-  let speakerIdx = 0;
+  const speakerLabels = ['話者A', '話者B', '話者C', '話者D', '話者E', '話者F'];
+  const speakerMap = new Map<number, string>();
 
   const segments: TranscriptionSegment[] = [];
+  let currentSpeakerNum = words[0].speaker ?? 0;
+  speakerMap.set(currentSpeakerNum, speakerLabels[0]);
+
   let current: TranscriptionSegment = {
-    speaker: speakers[0],
+    speaker: speakerLabels[0],
     start: words[0].start,
     end: words[0].end,
     text: words[0].word,
   };
 
   for (let i = 1; i < words.length; i++) {
-    const pause = words[i].start - words[i - 1].end;
-    if (pause >= pauseThreshold) {
+    const speakerNum = words[i].speaker ?? 0;
+    if (speakerNum !== currentSpeakerNum) {
       segments.push({ ...current });
-      speakerIdx = (speakerIdx + 1) % speakers.length;
+      currentSpeakerNum = speakerNum;
+      if (!speakerMap.has(speakerNum)) {
+        speakerMap.set(speakerNum, speakerLabels[speakerMap.size % speakerLabels.length]);
+      }
       current = {
-        speaker: speakers[speakerIdx],
+        speaker: speakerMap.get(speakerNum)!,
         start: words[i].start,
         end: words[i].end,
         text: words[i].word,
@@ -147,27 +161,29 @@ export async function handleUploadTranscription(request: Request, env: Env): Pro
       fileKey,
     });
 
-    // Workers AI Whisper で文字起こし
+    // Deepgram Nova-3 で文字起こし（将来 whisper-large-v3-turbo への切り替えを想定）
     try {
-      const audioBytes = [...new Uint8Array(arrayBuffer)];
+      const stream = new Response(arrayBuffer).body;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const whisperResult = (await (env.AI as any).run('@cf/openai/whisper', {
-        audio: audioBytes,
-      })) as WhisperResult;
+      const rawResponse = (await (env.AI as any).run(
+        '@cf/deepgram/nova-3',
+        { audio: { body: stream, contentType: mimeType }, diarize: true, detect_language: true },
+        { returnRawResponse: true }
+      )) as Response;
 
-      const transcript = whisperResult.text ?? '';
-      const words = whisperResult.words ?? [];
+      const novaResult = (await rawResponse.json()) as NovaResult;
+      const alternative = novaResult.results?.channels?.[0]?.alternatives?.[0];
+      const transcript = alternative?.transcript ?? '';
+      const words = alternative?.words ?? [];
 
       const segments =
         words.length > 0
-          ? segmentByPause(words)
+          ? segmentBySpeaker(words)
           : transcript
             ? [{ speaker: '話者A', start: 0, end: 0, text: transcript }]
             : [];
 
-      // duration は最後のワードの終了時刻から推定
-      const durationSeconds =
-        words.length > 0 ? words[words.length - 1].end : null;
+      const durationSeconds = words.length > 0 ? words[words.length - 1].end : null;
 
       await updateTranscriptionCompleted(env.DB, id, {
         transcript,
@@ -177,7 +193,7 @@ export async function handleUploadTranscription(request: Request, env: Env): Pro
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error('[transcriptions/upload] Whisper error:', msg);
+      console.error('[transcriptions/upload] Nova-3 error:', msg);
       await updateTranscriptionError(env.DB, id, msg);
     }
 
