@@ -130,10 +130,12 @@ export async function routeAPI(request: Request, env: Env): Promise<Response> {
       });
     }
 
-    // CORS ヘッダーを追加
-    Object.entries(corsHeaders).forEach(([key, value]) => {
-      response.headers.set(key, value);
-    });
+    // CORS ヘッダーを追加（リダイレクト応答はヘッダーがイミュータブルなのでスキップ）
+    if (response.status < 300 || response.status >= 400) {
+      Object.entries(corsHeaders).forEach(([key, value]) => {
+        response.headers.set(key, value);
+      });
+    }
 
     return response;
   } catch (err) {
