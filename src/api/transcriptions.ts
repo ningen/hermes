@@ -149,7 +149,7 @@ export async function handleUploadTranscription(request: Request, env: Env): Pro
 
     // Workers AI Whisper で文字起こし
     try {
-      const audioBytes = [...new Uint8Array(arrayBuffer)];
+      const audioBytes = new Uint8Array(arrayBuffer);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const whisperResult = (await (env.AI as any).run('@cf/openai/whisper', {
         audio: audioBytes,
