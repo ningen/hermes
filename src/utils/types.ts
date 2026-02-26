@@ -10,6 +10,8 @@ export interface Env {
   DB: D1Database;
   SESSIONS?: KVNamespace;              // セッション管理用 KV（オプション）
   __STATIC_CONTENT?: KVNamespace;      // Workers Sites 用 KV（自動バインド）
+  AI: Ai;                              // Workers AI（文字起こし用）
+  TRANSCRIPTION_BUCKET: R2Bucket;      // R2 バケット（音声・動画ファイル保存用）
   MAILGUN_API_KEY: string;
   MAILGUN_DOMAIN: string;
   FROM_ADDRESS: string;

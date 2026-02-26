@@ -17,6 +17,14 @@ import {
   handleDeleteWorkflow,
 } from './workflows.js';
 import { handleListLogs } from './logs.js';
+import {
+  handleUploadTranscription,
+  handleListTranscriptions,
+  handleGetTranscription,
+  handleDeleteTranscription,
+  handleExtractSchedules,
+  handleCreateScheduleFromTranscription,
+} from './transcriptions.js';
 
 /**
  * API リクエストをルーティングする
@@ -86,6 +94,24 @@ export async function routeAPI(request: Request, env: Env): Promise<Response> {
     } else if (path.startsWith('/api/workflows/') && method === 'DELETE') {
       const id = path.split('/')[3];
       response = await handleDeleteWorkflow(request, env, id);
+    }
+    // 文字起こし
+    else if (path === '/api/transcriptions' && method === 'POST') {
+      response = await handleUploadTranscription(request, env);
+    } else if (path === '/api/transcriptions' && method === 'GET') {
+      response = await handleListTranscriptions(request, env);
+    } else if (path.match(/^\/api\/transcriptions\/[^/]+$/) && method === 'GET') {
+      const id = path.split('/')[3];
+      response = await handleGetTranscription(request, env, id);
+    } else if (path.match(/^\/api\/transcriptions\/[^/]+$/) && method === 'DELETE') {
+      const id = path.split('/')[3];
+      response = await handleDeleteTranscription(request, env, id);
+    } else if (path.match(/^\/api\/transcriptions\/[^/]+\/extract-schedules$/) && method === 'POST') {
+      const id = path.split('/')[3];
+      response = await handleExtractSchedules(request, env, id);
+    } else if (path.match(/^\/api\/transcriptions\/[^/]+\/create-schedule$/) && method === 'POST') {
+      const id = path.split('/')[3];
+      response = await handleCreateScheduleFromTranscription(request, env, id);
     }
     // 404
     else {

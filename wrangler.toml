@@ -11,6 +11,15 @@ binding = "DB"
 database_name = "hermes-db"
 database_id = "d5362889-7590-477d-b8e2-0956b84fbcab"
 
+# Workers AI（文字起こし用）
+[ai]
+binding = "AI"
+
+# R2 バケット（音声・動画ファイル保存用）
+[[r2_buckets]]
+binding = "TRANSCRIPTION_BUCKET"
+bucket_name = "hermes-transcriptions"
+
 # セッション管理用 KV ストレージ（オプション）
 # 作成方法: wrangler kv:namespace create "SESSIONS"
 # [[kv_namespaces]]
